@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}동물 키우기 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>동물 키우기</h1>
+    
+    <div class="pet-section">
+        <h2>내 동물</h2>
+        {% if user_pet %}
+            <div class="pet-info">
+                <p><strong>종류:</strong> {{ user_pet.get_pet_type_display }}</p>
+                <p><strong>레벨:</strong> {{ user_pet.current_level }}</p>
+                <p><strong>XP:</strong> {{ user_pet.current_xp }} / {{ user_pet.max_xp }}</p>
+                <div class="xp-bar">
+                    <div class="xp-fill" style="width: {% widthratio user_pet.current_xp user_pet.max_xp 100 %}%;"></div>
+                </div>
+            </div>
+            
+            <div class="inventory-section">
+                <h3>장착 중인 아이템</h3>
+                {% if inventory %}
+                    <ul>
+                        {% for item in inventory %}
+                            <li>{{ item.item_id.item_name }} 
+                                <a href="{% url 'equip_item' item.inventory_id %}" class="btn btn-sm btn-secondary">해제</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>장착 중인 아이템이 없습니다.</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>동물이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="shop-section">
+        <h2>상점</h2>
+        <p>보유 포인트: <strong>{{ user_points }}P</strong></p>
+        
+        <div class="item-list">
+            {% for item in items %}
+                <div class="item-card">
+                    <h4>{{ item.item_name }}</h4>
+                    <p>타입: {{ item.get_item_type_display }}</p>
+                    <p>필요 레벨: {{ item.required_level }}</p>
+                    <p>가격: {{ item.cost }}P</p>
+                    
+                    {% if item.item_id in owned_item_ids %}
+                        <span class="badge badge-info">보유 중</span>
+                    {% elif user_pet.current_level < item.required_level %}
+                        <span class="badge badge-warning">레벨 부족</span>
+                    {% elif user_points < item.cost %}
+                        <span class="badge badge-danger">포인트 부족</span>
+                    {% else %}
+                        <a href="{% url 'purchase_item' item.item_id %}" class="btn btn-primary">구매</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="points-history-section">
+        <h2>포인트 이력</h2>
+        {% if points_history %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>변동</th>
+                        <th>사유</th>
+                        <th>일시</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in points_history %}
+                        <tr>
+                            <td>{{ history.points_change|add:0|stringformat:"+d" }}P</td>
+                            <td>{{ history.get_reason_display }}</td>
+                            <td>{{ history.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>포인트 이력이 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

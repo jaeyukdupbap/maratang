@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}명예의 전당 - {{ pool.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>명예의 전당: {{ pool.title }}</h1>
+    
+    <div class="history-list">
+        {% if history %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>순위</th>
+                        <th>사용자</th>
+                        <th>기여 포인트</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in history %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ entry.user_id.username }}</td>
+                            <td>{{ entry.contributed_points }}P</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>기부 이력이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <a href="{% url 'donation' %}" class="btn btn-secondary">돌아가기</a>
+</div>
+{% endblock %}
+
+

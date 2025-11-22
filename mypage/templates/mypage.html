@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}마이페이지 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>마이페이지</h1>
+    
+    <div class="profile-section">
+        <h2>프로필</h2>
+        <p><strong>사용자명:</strong> {{ user.username }}</p>
+        <p><strong>이메일:</strong> {{ user.email }}</p>
+        <p><strong>보유 포인트:</strong> {{ user.total_points }}P</p>
+        <p><strong>가입일:</strong> {{ user.created_at|date:"Y-m-d" }}</p>
+    </div>
+    
+    {% if user_pet %}
+        <div class="pet-section">
+            <h2>내 동물</h2>
+            <p><strong>종류:</strong> {{ user_pet.get_pet_type_display }}</p>
+            <p><strong>레벨:</strong> {{ user_pet.current_level }}</p>
+            <p><strong>XP:</strong> {{ user_pet.current_xp }}</p>
+        </div>
+    {% endif %}
+    
+    <div class="inventory-section">
+        <h2>장착 중인 아이템</h2>
+        {% if inventory %}
+            <ul>
+                {% for item in inventory %}
+                    <li>{{ item.item_id.item_name }} ({{ item.item_id.get_item_type_display }})</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>장착 중인 아이템이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="meetings-section">
+        <h2>참여한 모임</h2>
+        {% if participated_meetings %}
+            <ul>
+                {% for meeting in participated_meetings %}
+                    <li><a href="{% url 'meeting_detail' meeting.meeting_id %}">{{ meeting.title }}</a></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>참여한 모임이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="hosted-meetings-section">
+        <h2>호스트한 모임</h2>
+        {% if hosted_meetings %}
+            <ul>
+                {% for meeting in hosted_meetings %}
+                    <li><a href="{% url 'meeting_detail' meeting.meeting_id %}">{{ meeting.title }}</a></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>호스트한 모임이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="points-history-section">
+        <h2>포인트 이력</h2>
+        {% if points_history %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>변동</th>
+                        <th>사유</th>
+                        <th>일시</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in points_history %}
+                        <tr>
+                            <td>{{ history.points_change|add:0|stringformat:"+d" }}P</td>
+                            <td>{{ history.get_reason_display }}</td>
+                            <td>{{ history.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>포인트 이력이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <a href="{% url 'notifications' %}" class="btn btn-primary">알림 확인</a>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}인증 제출 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>인증 제출: {{ meeting.title }}</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" action="{% url 'submission_create' meeting.meeting_id %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="text_summary">모임 요약</label>
+            <textarea id="text_summary" name="text_summary" class="form-control" rows="5" placeholder="모임 활동에 대해 간단히 설명해주세요."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="scene_photo">장소 사진 (필수)</label>
+            <input type="file" id="scene_photo" name="scene_photo" accept="image/*" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+            <h3>참여자 셀카</h3>
+            {% for participant in participants %}
+                <div class="participant-selfie">
+                    <label for="selfie_{{ participant.user_id.user_id }}">{{ participant.user_id.username }}의 셀카</label>
+                    <input type="file" id="selfie_{{ participant.user_id.user_id }}" 
+                           name="selfie_{{ participant.user_id.user_id }}" 
+                           accept="image/*" class="form-control">
+                </div>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary">제출하기</button>
+        <a href="{% url 'meeting_detail' meeting.meeting_id %}" class="btn btn-secondary">취소</a>
+    </form>
+</div>
+{% endblock %}
+
+

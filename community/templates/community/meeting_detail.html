@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ meeting.title }} - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ meeting.title }}</h1>
+    
+    <div class="meeting-detail">
+        <div class="meeting-info">
+            <p><strong>호스트:</strong> {{ meeting.host_id.username }}</p>
+            <p><strong>설명:</strong> {{ meeting.description }}</p>
+            <p><strong>장소:</strong> {{ meeting.location_name }}</p>
+            <p><strong>좌표:</strong> {{ meeting.location_coords }}</p>
+            <p><strong>일시:</strong> {{ meeting.meeting_date|date:"Y-m-d H:i" }}</p>
+            <p><strong>정원:</strong> {{ participant_count }} / {{ meeting.capacity }}</p>
+        </div>
+        
+        <div class="participants-section">
+            <h2>참여자 목록</h2>
+            <ul>
+                {% for participant in participants %}
+                    <li>{{ participant.user_id.username }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        {% if user.is_authenticated %}
+            <div class="actions">
+                {% if is_host %}
+                    <p>이 모임의 호스트입니다.</p>
+                    {% if not submission %}
+                        <a href="{% url 'submission_create' meeting.meeting_id %}" class="btn btn-primary">인증 제출하기</a>
+                    {% else %}
+                        <div class="submission-status">
+                            <h3>인증 상태: {{ submission.get_status_display }}</h3>
+                            {% if submission.status == 'rejected' and submission.admin_feedback %}
+                                <p><strong>반려 사유:</strong> {{ submission.admin_feedback }}</p>
+                                <a href="{% url 'submission_create' meeting.meeting_id %}" class="btn btn-warning">재제출하기</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% elif is_participant %}
+                    <p>이 모임에 참여 중입니다.</p>
+                    <a href="{% url 'meeting_cancel' meeting.meeting_id %}" class="btn btn-danger">참여 취소</a>
+                {% else %}
+                    <a href="{% url 'meeting_join' meeting.meeting_id %}" class="btn btn-success">참여하기</a>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>모임에 참여하려면 <a href="{% url 'login' %}">로그인</a>이 필요합니다.</p>
+        {% endif %}
+    </div>
+    
+    <a href="{% url 'community' %}" class="btn btn-secondary">목록으로 돌아가기</a>
+</div>
+{% endblock %}
+
+

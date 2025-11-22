@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}회원가입 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>회원가입</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" action="{% url 'signup' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="email">이메일</label>
+            <input type="email" id="email" name="email" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+            <label for="username">사용자명</label>
+            <input type="text" id="username" name="username" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+            <label for="password_confirm">비밀번호 확인</label>
+            <input type="password" id="password_confirm" name="password_confirm" required class="form-control">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">회원가입</button>
+    </form>
+    
+    <p>이미 계정이 있으신가요? <a href="{% url 'login' %}">로그인</a></p>
+</div>
+{% endblock %}

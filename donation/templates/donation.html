@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}기부 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>기부 돼지저금통</h1>
+    
+    {% if active_pool %}
+        <div class="donation-pool">
+            <h2>{{ active_pool.title }}</h2>
+            <div class="progress-section">
+                <div class="progress">
+                    <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%">
+                        {{ active_pool.get_progress_percentage }}%
+                    </div>
+                </div>
+                <p>{{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트</p>
+            </div>
+            
+            {% if user.is_authenticated %}
+                <p>내 기여도: {{ user_contribution }}P</p>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>현재 진행 중인 기부가 없습니다.</p>
+    {% endif %}
+    
+    <div class="completed-pools">
+        <h2>완료된 기부</h2>
+        {% if completed_pools %}
+            {% for pool in completed_pools %}
+                <div class="pool-card">
+                    <h3>{{ pool.title }}</h3>
+                    <p>목표: {{ pool.goal_points }}P | 달성: {{ pool.current_points }}P</p>
+                    <p>완료일: {{ pool.completed_at|date:"Y-m-d" }}</p>
+                    <a href="{% url 'donation_history' pool.pool_id %}" class="btn btn-outline-primary">명예의 전당 보기</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>완료된 기부가 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
