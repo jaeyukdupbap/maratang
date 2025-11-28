@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}동물 키우기 - MoodGarden{% endblock %}
 
@@ -9,12 +10,26 @@
     <div class="pet-section">
         <h2>내 동물</h2>
         {% if user_pet %}
-            <div class="pet-info">
-                <p><strong>종류:</strong> {{ user_pet.get_pet_type_display }}</p>
-                <p><strong>레벨:</strong> {{ user_pet.current_level }}</p>
-                <p><strong>XP:</strong> {{ user_pet.current_xp }} / {{ user_pet.max_xp }}</p>
-                <div class="xp-bar">
-                    <div class="xp-fill" style="width: {% widthratio user_pet.current_xp user_pet.max_xp 100 %}%;"></div>
+            <div class="pet-display">
+                <!-- 현재 레벨에 맞는 펫 이미지 표시 -->
+                {% with formatted_level=user_pet.current_level|stringformat:"03d" %}
+                {% with image_path='growth/pet/'|add:user_pet.pet_type|add:'/ezgif-frame-'|add:formatted_level|add:'.png' %}
+                    <div class="pet-image">
+                        <img src="{% static image_path %}" 
+                             alt="{{ user_pet.get_pet_type_display }}" 
+                             loading="lazy">
+                    </div>
+                {% endwith %}
+                {% endwith %}
+                
+                <div class="pet-info">
+                    <p><strong>종류:</strong> {{ user_pet.get_pet_type_display }}</p>
+                    <p><strong>레벨:</strong> {{ user_pet.current_level }}</p>
+                    <p><strong>XP:</strong> {{ user_pet.current_xp }} / {{ user_pet.max_xp }}</p>
+                    <div class="xp-bar">
+                        {% widthratio user_pet.current_xp user_pet.max_xp 100 as xp_percent %}
+                        <div class="xp-fill" style="width: {{ xp_percent }}%"></div>
+                    </div>
                 </div>
             </div>
             
@@ -33,12 +48,21 @@
                 {% endif %}
             </div>
         {% else %}
-            <p>동물이 없습니다.</p>
+            <div class="no-pet-section">
+                <p>아직 펫이 없습니다.</p>
+                <p class="no-pet-message">펫을 선택하여 함께 성장해보세요!</p>
+                <a href="{% url 'pet_select' %}" class="btn btn-primary btn-lg">펫을 선택하겠습니다</a>
+            </div>
         {% endif %}
     </div>
     
     <div class="shop-section">
-        <h2>상점</h2>
+        <h2><a href="{% url 'shop' %}" 
+        style="color: rgb(65, 65, 65); 
+        text-decoration-line:none; 
+        background-color: transparent; 
+        border: 2px solid #3498db;
+        color: #3498db;">상점</a></h2>
         <p>보유 포인트: <strong>{{ user_points }}P</strong></p>
         
         <div class="item-list">
@@ -51,7 +75,7 @@
                     
                     {% if item.item_id in owned_item_ids %}
                         <span class="badge badge-info">보유 중</span>
-                    {% elif user_pet.current_level < item.required_level %}
+                    {% elif user_pet and user_pet.current_level < item.required_level %}
                         <span class="badge badge-warning">레벨 부족</span>
                     {% elif user_points < item.cost %}
                         <span class="badge badge-danger">포인트 부족</span>
@@ -89,4 +113,108 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+    .pet-display {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .pet-image {
+        flex-shrink: 0;
+        width: 250px;
+        height: 250px;
+        background-color: #fff;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ddd;
+    }
+    
+    .pet-image img {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+    }
+    
+    .pet-info {
+        flex: 1;
+        min-width: 250px;
+    }
+    
+    .pet-info p {
+        font-size: 1.1rem;
+        margin: 10px 0;
+        color: #333;
+    }
+    
+    .xp-bar {
+        width: 100%;
+        height: 30px;
+        background-color: #ddd;
+        border-radius: 15px;
+        overflow: hidden;
+        margin-top: 15px;
+    }
+    
+    .xp-fill {
+        height: 100%;
+        background-color: #4CAF50;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .no-pet-section {
+        text-align: center;
+        padding: 40px 20px;
+        background-color: #f0f0f0;
+        border-radius: 10px;
+    }
+    
+    .no-pet-section p {
+        font-size: 1.2rem;
+        color: #666;
+        margin: 10px 0;
+    }
+    
+    .no-pet-message {
+        font-size: 1rem !important;
+        color: #999 !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .btn-lg {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background-color: #45a049;
+    }
+</style>
+
 {% endblock %}
+

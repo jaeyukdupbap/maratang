@@ -28,8 +28,9 @@ class PetItem(models.Model):
 class UserPet(models.Model):
     """사용자 펫 상태 모델"""
     PET_TYPE_CHOICES = [
-        ('otter', '수달'),
-        ('fox', '여우'),
+        ('cat', '고양이'),
+        ('dog', '강아지'),
+        ('tree', '그루트'),
         # 필요시 추가 가능
     ]
     

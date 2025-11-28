@@ -39,14 +39,6 @@ def signup(request):
                 username=username,
                 password=password
             )
-            # UserPet 자동 생성
-            from growth.models import UserPet
-            UserPet.objects.create(
-                user_id=user,
-                pet_type='otter',
-                current_level=1,
-                current_xp=0
-            )
             messages.success(request, '회원가입이 완료되었습니다. 로그인해주세요.')
             return redirect('login')
         except Exception as e:

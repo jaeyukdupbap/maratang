@@ -5,19 +5,19 @@
 {% block content %}
 <div class="container">
     <h1>기부 돼지저금통</h1>
+    <img src="image/pig.png">
     
     {% if active_pool %}
         <div class="donation-pool">
             <h2>{{ active_pool.title }}</h2>
             <div class="progress-section">
                 <div class="progress">
-                    <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%">
+                    <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%;">
                         {{ active_pool.get_progress_percentage }}%
                     </div>
                 </div>
                 <p>{{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트</p>
             </div>
-            
             {% if user.is_authenticated %}
                 <p>내 기여도: {{ user_contribution }}P</p>
             {% endif %}

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}펫 선택 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="pet-select-section">
+        <h1>펫을 선택하세요!</h1>
+        <p class="subtitle">당신이 키울 펫을 선택해주세요. 나중에 변경할 수 없습니다.</p>
+        
+        <form method="post" class="pet-selection-form">
+            {% csrf_token %}
+            
+            <div class="pet-options">
+                {% for pet in pet_choices %}
+                    <div class="pet-card">
+                        <input type="radio" name="pet_type" value="{{ pet.type }}" id="pet_{{ pet.type }}" required>
+                        <label for="pet_{{ pet.type }}">
+                            <div class="pet-preview">
+                                {% with pet_image='growth/pet/'|add:pet.type|add:'/ezgif-frame-030.png' %}
+                                <img src="{% static pet_image %}" 
+                                     alt="{{ pet.name }}" 
+                                     loading="lazy">
+                                {% endwith %}
+                            </div>
+                            <div class="pet-info">
+                                <h3>{{ pet.name }}</h3>
+                                <p>선택</p>
+                            </div>
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="pet-select-actions">
+                <button type="submit" class="btn btn-primary btn-lg">펫 선택 완료</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .pet-select-section {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        text-align: center;
+    }
+    
+    .pet-select-section h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    
+    .subtitle {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 40px;
+    }
+    
+    .pet-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+    
+    .pet-card {
+        position: relative;
+    }
+    
+    .pet-card input[type="radio"] {
+        display: none;
+    }
+    
+    .pet-card label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        padding: 20px;
+        border: 3px solid #ddd;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        background-color: #f9f9f9;
+    }
+    
+    .pet-card input[type="radio"]:checked + label {
+        border-color: #4CAF50;
+        background-color: #e8f5e9;
+        transform: scale(1.05);
+    }
+    
+    .pet-card label:hover {
+        border-color: #999;
+        background-color: #f0f0f0;
+    }
+    
+    .pet-preview {
+        width: 150px;
+        height: 150px;
+        overflow: hidden;
+        border-radius: 10px;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    
+    .pet-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .pet-info h3 {
+        font-size: 1.3rem;
+        margin: 10px 0 5px 0;
+        color: #333;
+    }
+    
+    .pet-info p {
+        font-size: 0.9rem;
+        color: #999;
+        margin: 0;
+    }
+    
+    .pet-select-actions {
+        margin-top: 30px;
+    }
+    
+    .btn-lg {
+        padding: 15px 40px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+    }
+    
+    .btn-primary {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background-color: #45a049;
+    }
+</style>
+{% endblock %}

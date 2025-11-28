@@ -7,19 +7,53 @@ from account.models import User
 # Create your views here.
 
 @login_required
+def pet_select(request):
+    """펫 선택 페이지"""
+    try:
+        user_pet = UserPet.objects.get(user_id=request.user)
+        # 이미 펫이 있으면 성장 페이지로 리다이렉트
+        return redirect('growth')
+    except UserPet.DoesNotExist:
+        pass
+    
+    if request.method == 'POST':
+        pet_type = request.POST.get('pet_type')
+        
+        if pet_type not in ['cat', 'dog', 'tree']:
+            messages.error(request, '유효하지 않은 펫 종류입니다.')
+            return render(request, 'pet_select.html')
+        
+        try:
+            user_pet = UserPet.objects.create(
+                user_id=request.user,
+                pet_type=pet_type,
+                current_level=1,
+                current_xp=0
+            )
+            messages.success(request, f'{user_pet.get_pet_type_display()}을(를) 선택했습니다!')
+            return redirect('growth')
+        except Exception as e:
+            messages.error(request, f'펫 생성 중 오류가 발생했습니다: {str(e)}')
+            return render(request, 'pet_select.html')
+    
+    pet_choices = [
+        {'type': 'cat', 'name': '고양이'},
+        {'type': 'dog', 'name': '강아지'},
+        {'type': 'tree', 'name': '그루트'},
+    ]
+    
+    return render(request, 'pet_select.html', {'pet_choices': pet_choices})
+
+
+@login_required
 def growth(request):
     """동물 키우기 메인 페이지"""
     # 사용자 펫 정보
     try:
         user_pet = UserPet.objects.get(user_id=request.user)
     except UserPet.DoesNotExist:
-        # 펫이 없으면 생성
-        user_pet = UserPet.objects.create(
-            user_id=request.user,
-            pet_type='otter',
-            current_level=1,
-            current_xp=0
-        )
+        # 펫이 없으면 펫 선택 페이지로 리다이렉트
+        return redirect('pet_select')
     
     # 상점 아이템 목록
     items = PetItem.objects.all().order_by('required_level', 'cost')
@@ -112,3 +146,7 @@ def equip_item(request, inventory_id):
     messages.success(request, f'{inventory_item.item_id.item_name}을(를) {status}했습니다.')
     
     return redirect('growth')
+
+@login_required
+def shop(request):
+    return render(request, 'shop.html')

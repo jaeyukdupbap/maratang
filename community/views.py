@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from .models import CommunityMeeting, MeetingParticipant, MeetingSubmission, SubmissionMedia
 from account.models import User
 
@@ -96,12 +97,29 @@ def meeting_create(request):
             return render(request, 'community/meeting_create.html')
         
         try:
+            # Parse meeting_date (input type=datetime-local -> e.g. '2025-11-26T10:00')
+            dt = None
+            if meeting_date:
+                dt = parse_datetime(meeting_date)
+                if dt is None:
+                    # fallback: try replacing 'T' with space
+                    try:
+                        dt = parse_datetime(meeting_date.replace(' ', 'T'))
+                    except Exception:
+                        dt = None
+                # Make timezone-aware if settings use tz and dt is naive
+                if dt is not None and timezone.is_naive(dt):
+                    dt = timezone.make_aware(dt)
+
+            if dt is None:
+                raise ValueError('Invalid meeting_date format')
+
             meeting = CommunityMeeting.objects.create(
                 host_id=request.user,
                 title=title,
                 description=description,
                 location_name=location_name,
-                meeting_date=meeting_date,
+                meeting_date=dt,
                 capacity=int(capacity)
             )
             messages.success(request, '모임이 생성되었습니다.')
@@ -134,9 +152,16 @@ def meeting_join(request, meeting_id):
         messages.error(request, '모임 정원이 가득 찼습니다.')
         return redirect('meeting_detail', meeting_id=meeting_id)
     
-    # 모임 날짜 확인
-    if meeting.meeting_date < timezone.now():
-        messages.error(request, '이미 지난 모임입니다.')
+    # 모임 날짜 확인 (ensure timezone-aware comparison)
+    try:
+        meeting_dt = meeting.meeting_date
+        if timezone.is_naive(meeting_dt):
+            meeting_dt = timezone.make_aware(meeting_dt)
+        if meeting_dt < timezone.now():
+            messages.error(request, '이미 지난 모임입니다.')
+            return redirect('meeting_detail', meeting_id=meeting_id)
+    except Exception:
+        messages.error(request, '모임 일시를 확인할 수 없습니다.')
         return redirect('meeting_detail', meeting_id=meeting_id)
     
     try:
