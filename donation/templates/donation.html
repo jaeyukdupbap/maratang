@@ -1,45 +1,174 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}기부 - MoodGarden{% endblock %}
 
 {% block content %}
 <div class="container">
     <h1>기부 돼지저금통</h1>
-    <img src="image/pig.png">
-    
-    {% if active_pool %}
-        <div class="donation-pool">
-            <h2>{{ active_pool.title }}</h2>
-            <div class="progress-section">
-                <div class="progress">
-                    <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%;">
-                        {{ active_pool.get_progress_percentage }}%
-                    </div>
+
+    <div class="layout" style="display: flex; gap: 2rem;">
+        {# 좌측 패널: 관리자 전용 버튼 #}
+        <aside style="flex: 1;">
+            {% if user.is_staff %}
+                <div class="admin-panel">
+                    <h2>관리자</h2>
+                    <a href="{% url 'donation_create' %}">기부 캠페인 생성</a>
                 </div>
-                <p>{{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트</p>
-            </div>
-            {% if user.is_authenticated %}
-                <p>내 기여도: {{ user_contribution }}P</p>
             {% endif %}
-        </div>
-    {% else %}
-        <p>현재 진행 중인 기부가 없습니다.</p>
-    {% endif %}
-    
-    <div class="completed-pools">
-        <h2>완료된 기부</h2>
-        {% if completed_pools %}
-            {% for pool in completed_pools %}
-                <div class="pool-card">
-                    <h3>{{ pool.title }}</h3>
-                    <p>목표: {{ pool.goal_points }}P | 달성: {{ pool.current_points }}P</p>
-                    <p>완료일: {{ pool.completed_at|date:"Y-m-d" }}</p>
-                    <a href="{% url 'donation_history' pool.pool_id %}" class="btn btn-outline-primary">명예의 전당 보기</a>
+        </aside>
+
+        {# 중앙 패널: 돼지저금통 + 진행률 #}
+        <main style="flex: 2;">
+            {% if active_pool %}
+                <div class="donation-pool">
+                    <h2>{{ active_pool.title }}</h2>
+                    {% if active_pool.sponsor %}
+                        <p>후원사: {{ active_pool.sponsor }}</p>
+                    {% endif %}
+
+                    <div class="pig-image">
+                        <img src="{% static 'donation/pig.png' %}" alt="기부 돼지저금통" style="max-width: 200px;">
+                    </div>
+
+                    <div class="progress-section">
+                        <div class="progress" style="background: #eee; border-radius: 8px; overflow: hidden;">
+                            <div class="progress-bar"
+                                 style="width: {{ active_pool.get_progress_percentage }}%; background: #ff8080; color: #fff; text-align: center;">
+                                {{ active_pool.get_progress_percentage }}%
+                            </div>
+                        </div>
+                        <p>
+                            {{ active_pool.current_points|default:0 }} / {{ active_pool.goal_points }} 포인트
+                        </p>
+                    </div>
+
+                    {% if user.is_authenticated %}
+                        <p>내 기여도: <strong>{{ user_contribution }}</strong>P</p>
+                    {% endif %}
                 </div>
-            {% endfor %}
+            {% else %}
+                <p>현재 진행 중인 기부 캠페인이 없습니다.</p>
+            {% endif %}
+        </main>
+
+        {# 우측 패널: TOP 10 / 최근 기부 내역 #}
+        <aside style="flex: 2;">
+            <section class="top-donors">
+                <h2>TOP 10 기부자</h2>
+                {% if top_donors %}
+                    <ol>
+                        {% for donor in top_donors %}
+                            <li>
+                                {{ donor.user_id__username }} - {{ donor.total_amount }}P
+                            </li>
+                        {% endfor %}
+                    </ol>
+                {% else %}
+                    <p>아직 집계된 기부 내역이 없습니다.</p>
+                {% endif %}
+            </section>
+
+            <section class="recent-donations" style="margin-top: 2rem;">
+                <h2>최근 기부 내역</h2>
+                {% if recent_donations %}
+                    <ul>
+                        {% for d in recent_donations %}
+                            <li class="donation-item"
+                                data-title="{{ d.pool_id.title }}"
+                                data-username="{{ d.user_id.username }}"
+                                data-amount="{{ d.amount }}"
+                                data-created="{{ d.created_at|date:'Y-m-d H:i' }}">
+                                <span>{{ d.user_id.username }}</span>
+                                <span>+{{ d.amount }}P</span>
+                                <span>({{ d.created_at|date:'m/d H:i' }})</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% if not show_all_donations %}
+                        <a href="?view=all">더보기</a>
+                    {% endif %}
+                {% else %}
+                    <p>아직 기부 내역이 없습니다.</p>
+                {% endif %}
+            </section>
+        </aside>
+    </div>
+
+    {# 하단 패널: 현재 캠페인 요약 정보 #}
+    <section class="campaign-summary" style="margin-top: 3rem;">
+        <h2>현재 진행 중인 기부 캠페인</h2>
+        {% if active_pool %}
+            <div>
+                <h3>{{ active_pool.title }}</h3>
+                {% if active_pool.description %}
+                    <p>{{ active_pool.description }}</p>
+                {% endif %}
+                <p>
+                    기간:
+                    {% if active_pool.start_date %}
+                        {{ active_pool.start_date|date:"Y-m-d" }}
+                    {% else %}
+                        시작일 미정
+                    {% endif %}
+                    ~
+                    {% if active_pool.end_date %}
+                        {{ active_pool.end_date|date:"Y-m-d" }}
+                    {% else %}
+                        종료일 미정
+                    {% endif %}
+                </p>
+            </div>
         {% else %}
-            <p>완료된 기부가 없습니다.</p>
+            <p>진행 중인 캠페인이 없습니다.</p>
         {% endif %}
+    </section>
+</div>
+
+{# 상세 모달 #}
+<div id="donationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);">
+    <div style="background:#fff; max-width:400px; margin:5rem auto; padding:1.5rem; border-radius:8px; position:relative;">
+        <button type="button" id="donationModalClose" style="position:absolute; top:0.5rem; right:0.5rem;">X</button>
+        <h3 id="modalTitle"></h3>
+        <p><strong>기부자:</strong> <span id="modalUsername"></span></p>
+        <p><strong>기부 포인트:</strong> <span id="modalAmount"></span>P</p>
+        <p><strong>기부 일시:</strong> <span id="modalCreated"></span></p>
+        <p style="font-size:0.9rem; color:#666;">
+            이 내역은 펫 상점에서 포인트를 사용한 결과 자동으로 적립된 기부 기록입니다.
+        </p>
     </div>
 </div>
+
+<script>
+    (function () {
+        const modal = document.getElementById('donationModal');
+        const closeBtn = document.getElementById('donationModalClose');
+
+        if (!modal || !closeBtn) return;
+
+        const titleEl = document.getElementById('modalTitle');
+        const usernameEl = document.getElementById('modalUsername');
+        const amountEl = document.getElementById('modalAmount');
+        const createdEl = document.getElementById('modalCreated');
+
+        document.querySelectorAll('.donation-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                titleEl.textContent = item.dataset.title || '';
+                usernameEl.textContent = item.dataset.username || '';
+                amountEl.textContent = item.dataset.amount || '0';
+                createdEl.textContent = item.dataset.created || '';
+                modal.style.display = 'block';
+            });
+        });
+
+        closeBtn.addEventListener('click', function () {
+            modal.style.display = 'none';
+        });
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    })();
+</script>
 {% endblock %}
