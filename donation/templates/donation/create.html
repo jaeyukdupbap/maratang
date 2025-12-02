@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}기부 캠페인 생성 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>기부 캠페인 생성</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div>
+            <label for="{{ form.title.id_for_label }}">제목</label>
+            {{ form.title }}
+            {{ form.title.errors }}
+        </div>
+
+        <div>
+            <label for="{{ form.sponsor.id_for_label }}">후원사</label>
+            {{ form.sponsor }}
+            {{ form.sponsor.errors }}
+        </div>
+
+        <div>
+            <label for="{{ form.start_date.id_for_label }}">시작일</label>
+            {{ form.start_date }}
+            {{ form.start_date.errors }}
+        </div>
+
+        <div>
+            <label for="{{ form.end_date.id_for_label }}">종료일</label>
+            {{ form.end_date }}
+            {{ form.end_date.errors }}
+        </div>
+
+        <div>
+            <label for="{{ form.goal_points.id_for_label }}">목표 포인트</label>
+            {{ form.goal_points }}
+            {{ form.goal_points.errors }}
+        </div>
+
+        <button type="submit">캠페인 생성</button>
+        <a href="{% url 'donation' %}">취소</a>
+    </form>
+</div>
+{% endblock %}
+
+
