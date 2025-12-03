@@ -55,6 +55,10 @@ class MeetingSubmission(models.Model):
     text_summary = models.TextField(blank=True, null=True)
     admin_feedback = models.TextField(blank=True, null=True, help_text="반려 사유 등")
     created_at = models.DateTimeField(auto_now_add=True)
+    # 관리자 처리 기록
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='processed_submissions', db_column='processed_by')
+    processed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         db_table = 'meeting_submission'
@@ -76,7 +80,13 @@ class SubmissionMedia(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='submission_media', db_column='user_id', 
                                 help_text="selfie일 때 해당 셀카의 사용자 ID, scene_photo일 때는 NULL")
     media_type = models.CharField(max_length=20, choices=MEDIA_TYPE_CHOICES)
-    file_url = models.URLField(max_length=500, help_text="S3 or Storage URL")
+    # store uploaded file using Django storage (local MEDIA or configured S3/etc.)
+    file = models.FileField(upload_to='submission_media/%Y/%m/%d/', max_length=500, null=True, blank=True,
+                            help_text="업로드된 파일(로컬 또는 스토리지)")
+    # 관리자 처리 정보 (누가 언제 처리했는지 감사용)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='processed_media', db_column='processed_by')
+    processed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

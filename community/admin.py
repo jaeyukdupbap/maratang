@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import CommunityMeeting, MeetingParticipant, MeetingSubmission, SubmissionMedia
 from .tasks import grant_points_for_meeting
 from notification.models import Notification
+from django.utils import timezone
 
 # Register your models here.
 
@@ -44,15 +45,17 @@ class MeetingSubmissionAdmin(admin.ModelAdmin):
         for submission in queryset:
             if submission.status == 'pending':
                 submission.status = 'admin_pass'
+                submission.processed_by = request.user
+                submission.processed_at = timezone.now()
                 submission.save()
-                
+
                 # 포인트 지급
                 grant_points_for_meeting(submission.meeting_id)
-                
+
                 # 알림 전송
                 Notification.objects.create(
                     user_id=submission.host_id,
-                    notification_type='ai_approved',
+                    notification_type='admin_approved',
                     title='인증 승인',
                     message=f"'{submission.meeting_id.title}' 모임 인증이 승인되었습니다.",
                     related_meeting_id=submission.meeting_id
@@ -69,10 +72,12 @@ class MeetingSubmissionAdmin(admin.ModelAdmin):
         for submission in queryset:
             if submission.status == 'pending':
                 submission.status = 'rejected'
+                submission.processed_by = request.user
+                submission.processed_at = timezone.now()
                 if not submission.admin_feedback:
                     submission.admin_feedback = '관리자에 의해 반려되었습니다.'
                 submission.save()
-                
+
                 # 알림 전송
                 Notification.objects.create(
                     user_id=submission.host_id,
@@ -88,7 +93,7 @@ class MeetingSubmissionAdmin(admin.ModelAdmin):
 
 @admin.register(SubmissionMedia)
 class SubmissionMediaAdmin(admin.ModelAdmin):
-    list_display = ['media_id', 'submission_id', 'media_type', 'user_id', 'created_at']
+    list_display = ['media_id', 'submission_id', 'media_type', 'user_id', 'file', 'processed_by', 'processed_at', 'created_at']
     list_filter = ['media_type', 'created_at']
     search_fields = ['submission_id__meeting_id__title', 'user_id__username']
     readonly_fields = ['media_id', 'created_at']

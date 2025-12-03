@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/donation.css' %}">
 {% block title %}홈 - MoodGarden{% endblock %}
 
 {% block content %}
@@ -47,8 +48,8 @@
             <div class="donation-card">
                 <h3>{{ active_pool.title }}</h3>
                 <div class="progress">
-                    <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%">
-                        {{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트
+                    <div class="progress-bar">
+                        {{ active_pool.current_points }} / {{ active_pool.goal_points }} 원
                     </div>
                 </div>
                 <p>{{ active_pool.get_progress_percentage }}% 달성</p>

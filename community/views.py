@@ -233,12 +233,11 @@ def submission_create(request, meeting_id):
                 status='pending'
             )
             
-            # 장소 사진 업로드 (실제로는 S3나 파일 스토리지에 저장)
-            # 여기서는 URL을 시뮬레이션
+            # 장소 사진 업로드: 실제 업로드 파일을 SubmissionMedia.file에 저장
             SubmissionMedia.objects.create(
                 submission_id=submission,
                 media_type='scene_photo',
-                file_url=f'/media/submissions/{submission.submission_id}/scene_photo.jpg'
+                file=scene_photo
             )
             
             # 참여자 셀카 업로드
@@ -250,7 +249,7 @@ def submission_create(request, meeting_id):
                         submission_id=submission,
                         user_id=participant.user_id,
                         media_type='selfie',
-                        file_url=f'/media/submissions/{submission.submission_id}/selfie_{participant.user_id.user_id}.jpg'
+                        file=selfie
                     )
             
             # AI 인증 프로세스 시작 (비동기로 처리 가능)
