@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}커뮤니티 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="community-wrapper">
+    <!-- Hero Section -->
+    <section class="community-hero">
+        <div class="hero-content">
+            <p class="eyebrow">인기 소셜링 👀</p>
+            <h1>주목! 인기 폭발 모임들이 한 곳에</h1>
+            <p class="subtitle">이번 주 가장 많이 저장된 모임을 만나보세요.</p>
+        </div>
+        <div class="hero-actions">
+            {% if user.is_authenticated %}
+                <a href="{% url 'meeting_create' %}" class="btn-create">모임 만들기</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn-create">로그인하고 모임 만들기</a>
+            {% endif %}
+            <a href="{% url 'community' %}" class="btn-view-more">더 보기</a>
+        </div>
+    </section>
+
+    <!-- Scrollable Cards Section -->
+    <section class="cards-section">
+        <div class="cards-container">
+            <div class="cards-scroll" id="cardsScroll">
+                {% if meetings %}
+                    {% for meeting in meetings %}
+                        <article class="meeting-card" data-meeting-id="{{ meeting.meeting_id }}">
+                            <div class="card-image-wrapper">
+                                <img 
+                                    src="https://picsum.photos/seed/{{ meeting.meeting_id }}/400/300" 
+                                    alt="{{ meeting.title }}"
+                                    class="card-image"
+                                    loading="lazy"
+                                    onerror="this.src='https://via.placeholder.com/400x300/667eea/ffffff?text=Meeting'"
+                                >
+                                <button class="card-heart {% if meeting.meeting_id in user_participations %}active{% endif %}" 
+                                        data-meeting-id="{{ meeting.meeting_id }}" 
+                                        aria-label="찜하기">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="card-content">
+                                <p class="card-location">{{ meeting.location_name }} · 모임</p>
+                                <h3 class="card-title">
+                                    <a href="{% url 'meeting_detail' meeting.meeting_id %}">{{ meeting.title }}</a>
+                                </h3>
+                                <p class="card-description">{{ meeting.description|truncatechars:60 }}</p>
+                                <div class="card-meta">
+                                    <span class="card-date">🗓 {{ meeting.meeting_date|date:"y.m.d(D)" }} · {{ meeting.meeting_date|date:"a g:i" }}</span>
+                                    <span class="card-participants">👥 {{ meeting.participant_count|default:0 }}/{{ meeting.capacity }}</span>
+                                </div>
+                                <div class="card-actions">
+                                    {% if user.is_authenticated %}
+                                        {% if meeting.meeting_id in user_participations %}
+                                            <a href="{% url 'meeting_cancel' meeting.meeting_id %}" class="btn-join joined">참여 취소</a>
+                                        {% elif meeting.host_id != user %}
+                                            <a href="{% url 'meeting_join' meeting.meeting_id %}" class="btn-join">참여하기</a>
+                                        {% else %}
+                                            <span class="btn-join host">호스트</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{% url 'login' %}" class="btn-join">참여하기</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <p>아직 등록된 모임이 없어요. 첫 모임을 만들어보세요!</p>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'meeting_create' %}" class="btn-create">모임 만들기</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Scroll Indicators -->
+        <button class="scroll-btn scroll-left" id="scrollLeft" aria-label="왼쪽으로 스크롤">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </button>
+        <button class="scroll-btn scroll-right" id="scrollRight" aria-label="오른쪽으로 스크롤">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+    </section>
+</div>
+
+<style>
+.community-wrapper {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 40px 20px 80px;
+}
+
+/* Hero Section */
+.community-hero {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.hero-content {
+    flex: 1;
+    min-width: 300px;
+}
+
+.eyebrow {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ff6b81;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.community-hero h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1f2027;
+    margin: 0 0 12px;
+    line-height: 1.2;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #7b7e83;
+    margin: 0;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-create,
+.btn-view-more {
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.btn-create {
+    background: linear-gradient(135deg, #ff6b81 0%, #f7325e 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(247, 50, 94, 0.3);
+}
+
+.btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 50, 94, 0.4);
+}
+
+.btn-view-more {
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2027;
+    border: 2px solid rgba(31, 32, 39, 0.1);
+}
+
+.btn-view-more:hover {
+    background: white;
+    border-color: rgba(31, 32, 39, 0.2);
+}
+
+/* Cards Section */
+.cards-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.cards-container {
+    overflow: hidden;
+    border-radius: 24px;
+    position: relative;
+}
+
+.cards-scroll {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    padding: 20px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.cards-scroll::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.meeting-card {
+    min-width: 320px;
+    max-width: 320px;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.meeting-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-image-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 65%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.meeting-card:hover .card-image {
+    transform: scale(1.1);
+}
+
+.card-heart {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    color: #7b7e83;
+}
+
+.card-heart:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
+.card-heart.active {
+    color: #ff6b81;
+}
+
+.card-heart.active svg {
+    fill: #ff6b81;
+}
+
+.card-content {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.card-location {
+    font-size: 13px;
+    color: #7b7e83;
+    margin: 0;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.card-title a {
+    color: #1f2027;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.card-title a:hover {
+    color: #ff6b81;
+}
+
+.card-description {
+    font-size: 14px;
+    color: #7b7e83;
+    line-height: 1.5;
+    margin: 0;
+    flex: 1;
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #7b7e83;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.card-actions {
+    margin-top: 4px;
+}
+
+.btn-join {
+    display: inline-block;
+    width: 100%;
+    padding: 12px;
+    text-align: center;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-join:not(.joined):not(.host) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-join:hover:not(.joined):not(.host) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-join.joined {
+    background: #f0f0f0;
+    color: #7b7e83;
+}
+
+.btn-join.host {
+    background: #fff5f5;
+    color: #ff6b81;
+}
+
+/* Scroll Buttons */
+.scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    transition: all 0.3s ease;
+    color: #1f2027;
+}
+
+.scroll-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.scroll-left {
+    left: -24px;
+}
+
+.scroll-right {
+    right: -24px;
+}
+
+.scroll-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #7b7e83;
+}
+
+.empty-state p {
+    font-size: 18px;
+    margin-bottom: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .community-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .community-hero h1 {
+        font-size: 28px;
+    }
+
+    .hero-actions {
+        width: 100%;
+    }
+
+    .btn-create,
+    .btn-view-more {
+        flex: 1;
+        text-align: center;
+    }
+
+    .scroll-btn {
+        display: none;
+    }
+
+    .cards-scroll {
+        padding: 10px;
+    }
+
+    .meeting-card {
+        min-width: 280px;
+        max-width: 280px;
+    }
+}
+
+@media (max-width: 480px) {
+    .community-wrapper {
+        padding: 20px 10px 60px;
+    }
+
+    .meeting-card {
+        min-width: 260px;
+        max-width: 260px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cardsScroll = document.getElementById('cardsScroll');
+    const scrollLeft = document.getElementById('scrollLeft');
+    const scrollRight = document.getElementById('scrollRight');
+
+    // Scroll buttons functionality
+    function updateScrollButtons() {
+        if (!cardsScroll) return;
+        
+        const maxScroll = cardsScroll.scrollWidth - cardsScroll.clientWidth;
+        scrollLeft.disabled = cardsScroll.scrollLeft <= 0;
+        scrollRight.disabled = cardsScroll.scrollLeft >= maxScroll - 1;
+    }
+
+    if (scrollLeft && scrollRight && cardsScroll) {
+        scrollLeft.addEventListener('click', () => {
+            cardsScroll.scrollBy({ left: -340, behavior: 'smooth' });
+        });
+
+        scrollRight.addEventListener('click', () => {
+            cardsScroll.scrollBy({ left: 340, behavior: 'smooth' });
+        });
+
+        cardsScroll.addEventListener('scroll', updateScrollButtons);
+        updateScrollButtons();
+    }
+
+    // Heart button functionality (like/favorite)
+    document.querySelectorAll('.card-heart').forEach(heart => {
+        heart.addEventListener('click', function(e) {
+            e.preventDefault();
+            const meetingId = this.dataset.meetingId;
+            
+            // Toggle active state
+            this.classList.toggle('active');
+            
+            // Here you can add AJAX call to save like status
+            // fetch(`/community/meeting/${meetingId}/like/`, {
+            //     method: 'POST',
+            //     headers: {
+            //         'X-CSRFToken': getCookie('csrftoken'),
+            //         'Content-Type': 'application/json',
+            //     },
+            // });
+        });
+    });
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
