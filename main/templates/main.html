@@ -1,60 +1,617 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}홈 - MoodGarden{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>마라탕에 오신 것을 환영합니다!</h1>
-    
-    {% if user.is_authenticated %}
-        <div class="welcome-section">
-            <h2>안녕하세요, {{ user.username }}님!</h2>
-            {% if user_pet %}
-                <p>현재 레벨: {{ user_pet.current_level }} | XP: {{ user_pet.current_xp }}</p>
+<div class="home-hero">
+    <div class="home-container">
+        <!-- Left Section: Text Content -->
+        <div class="hero-left">
+            <div class="hero-content">
+                <h1 class="hero-heading">함께 나눈 식사, 마음을 따뜻하게 하는 시간!</h1>
+                <p class="hero-text">함께 웃고 대화하며, 건배로 한 해의 감사를 나눠요.</p>
+                <p class="hero-challenge">이제, 노폰 챌린지.</p>
+                <p class="hero-question">당신은 얼마나 오래 핸드폰 없이 지낼 수 있나요?</p>
+                <a href="{% url 'community' %}" class="btn-explore">Explore</a>
+            </div>
+        </div>
+
+        <!-- Right Section: Community Cards -->
+        <div class="hero-right">
+            {% if recent_meetings|length >= 2 %}
+                {% for meeting in recent_meetings|slice:":2" %}
+                    <div class="hero-card {% if forloop.counter == 1 %}card-purple{% else %}card-blue{% endif %}">
+                        <a href="{% url 'meeting_detail' meeting.meeting_id %}" class="card-link">
+                            <div class="card-image-container">
+                                <img 
+                                    src="https://picsum.photos/seed/{{ meeting.meeting_id }}/300/400" 
+                                    alt="{{ meeting.title }}"
+                                    class="card-hero-image"
+                                    loading="lazy"
+                                    onerror="this.src='https://via.placeholder.com/300x400'"
+                                >
+                                <div class="card-overlay">
+                                    <div class="card-info">
+                                        <p class="card-location">{{ meeting.location_name }}</p>
+                                        <h3 class="card-title">{{ meeting.title|truncatechars:30 }}</h3>
+                                        <p class="card-date">🗓 {{ meeting.meeting_date|date:"y.m.d(D)" }} · {{ meeting.meeting_date|date:"a g:i" }}</p>
+                                        <span class="card-participants">👥 {{ meeting.participant_count|default:0 }}/{{ meeting.capacity }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <!-- Fallback decorative cards if no meetings -->
+                <div class="hero-card card-purple">
+                    <div class="card-placeholder">
+                        <div class="placeholder-content">
+                            <h3>모임을 만들어보세요</h3>
+                            <p>첫 번째 커뮤니티 모임을<br>만들어보세요!</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-card card-blue">
+                    <div class="card-placeholder">
+                        <div class="placeholder-content">
+                            <h3>함께 성장하기</h3>
+                            <p>함께하는 시간이<br>특별한 추억이 됩니다</p>
+                        </div>
+                    </div>
+                </div>
             {% endif %}
-            <p>보유 포인트: {{ user.total_points }}P</p>
         </div>
-    {% else %}
-        <div class="welcome-section">
-            <p>커뮤니티 모임에 참여하고 포인트를 모아 동물을 키워보세요. 기부도 할 수 있어요!</p>
-            <a href="{% url 'login' %}" class="btn btn-primary">로그인</a>
-            <a href="{% url 'signup' %}" class="btn btn-secondary">회원가입</a>
+    </div>
+</div>
+
+<!-- Additional Sections -->
+{% if user.is_authenticated %}
+    <div class="user-section">
+        <div class="container">
+            <div class="welcome-card">
+                <h2>안녕하세요, {{ user.username }}님!</h2>
+                {% if user_pet %}
+                    <div class="pet-info">
+                        <p>현재 레벨: <strong>{{ user_pet.current_level }}</strong> | XP: <strong>{{ user_pet.current_xp }}</strong>/{{ user_pet.max_xp }}</p>
+                    </div>
+                {% endif %}
+                <p class="points-info">보유 포인트: <strong>{{ user.total_points }}P</strong></p>
+            </div>
         </div>
-    {% endif %}
-    
-    <div class="section">
-        <h2>최근 모임</h2>
-        {% if recent_meetings %}
-            <div class="meeting-list">
-                {% for meeting in recent_meetings %}
-                    <div class="meeting-card">
+    </div>
+{% endif %}
+
+{% if recent_meetings|length > 2 %}
+    <div class="recent-section">
+        <div class="container">
+            <h2 class="section-title">최근 모임</h2>
+            <div class="meeting-grid">
+                {% for meeting in recent_meetings|slice:"2:" %}
+                    <div class="meeting-mini-card">
                         <h3><a href="{% url 'meeting_detail' meeting.meeting_id %}">{{ meeting.title }}</a></h3>
-                        <p>{{ meeting.description|truncatewords:20 }}</p>
-                        <p>장소: {{ meeting.location_name }}</p>
-                        <p>일시: {{ meeting.meeting_date|date:"Y-m-d H:i" }}</p>
+                        <p>{{ meeting.description|truncatewords:15 }}</p>
+                        <p class="mini-location">📍 {{ meeting.location_name }}</p>
+                        <p class="mini-date">🗓 {{ meeting.meeting_date|date:"Y-m-d H:i" }}</p>
                     </div>
                 {% endfor %}
             </div>
-        {% else %}
-            <p>아직 생성된 모임이 없습니다.</p>
-        {% endif %}
-        <a href="{% url 'community' %}" class="btn btn-outline-primary">모든 모임 보기</a>
+            <div class="text-center">
+                <a href="{% url 'community' %}" class="btn-view-all">모든 모임 보기</a>
+            </div>
+        </div>
     </div>
-    
-    {% if active_pool %}
-        <div class="section">
-            <h2>진행 중인 기부</h2>
+{% endif %}
+
+{% if active_pool %}
+    <div class="donation-section">
+        <div class="container">
+            <h2 class="section-title">진행 중인 기부</h2>
             <div class="donation-card">
                 <h3>{{ active_pool.title }}</h3>
-                <div class="progress">
+                <div class="progress-container">
                     <div class="progress-bar" style="width: {{ active_pool.get_progress_percentage }}%">
-                        {{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트
+                        <span class="progress-text">{{ active_pool.current_points }} / {{ active_pool.goal_points }} 포인트</span>
                     </div>
                 </div>
-                <p>{{ active_pool.get_progress_percentage }}% 달성</p>
+                <p class="progress-percentage">{{ active_pool.get_progress_percentage }}% 달성</p>
             </div>
-            <a href="{% url 'donation' %}" class="btn btn-outline-primary">기부 페이지로 이동</a>
+            <div class="text-center">
+                <a href="{% url 'donation' %}" class="btn-view-all">기부 페이지로 이동</a>
+            </div>
         </div>
-    {% endif %}
-</div>
+    </div>
+{% endif %}
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.home-hero {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.home-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.home-container {
+    max-width: 1400px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* Left Section */
+.hero-left {
+    color: white;
+    padding: 40px;
+}
+
+.hero-content {
+    max-width: 500px;
+}
+
+.hero-heading {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 24px;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.hero-text {
+    font-size: 20px;
+    line-height: 1.6;
+    color: #e0e0e0;
+    margin-bottom: 16px;
+}
+
+.hero-challenge {
+    font-size: 24px;
+    font-weight: 600;
+    color: #a78bfa;
+    margin-bottom: 8px;
+}
+
+.hero-question {
+    font-size: 18px;
+    color: #b0b0b0;
+    margin-bottom: 40px;
+}
+
+.btn-explore {
+    display: inline-block;
+    padding: 16px 48px;
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(167, 139, 250, 0.4);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-explore:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 30px rgba(167, 139, 250, 0.6);
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+/* Right Section */
+.hero-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+    max-height: 700px;
+}
+
+.hero-card {
+    flex: 1;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+}
+
+.card-purple {
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+}
+
+.card-blue {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+.card-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+}
+
+.card-image-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    overflow: hidden;
+}
+
+.card-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.hero-card:hover .card-hero-image {
+    transform: scale(1.1);
+}
+
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+    padding: 30px 24px 24px;
+    color: white;
+}
+
+.card-info {
+    position: relative;
+    z-index: 2;
+}
+
+.card-location {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.3;
+    color: white;
+}
+
+.card-date {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+}
+
+.card-participants {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.card-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.placeholder-content {
+    text-align: center;
+    color: white;
+}
+
+.placeholder-content h3 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.placeholder-content p {
+    font-size: 16px;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+/* User Section */
+.user-section {
+    padding: 60px 20px;
+    background: #f8f9fa;
+}
+
+.welcome-card {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.welcome-card h2 {
+    font-size: 32px;
+    color: #1f2027;
+    margin-bottom: 24px;
+}
+
+.pet-info {
+    font-size: 18px;
+    color: #7b7e83;
+    margin-bottom: 16px;
+}
+
+.pet-info strong {
+    color: #8b5cf6;
+}
+
+.points-info {
+    font-size: 20px;
+    color: #1f2027;
+}
+
+.points-info strong {
+    color: #ff6b81;
+    font-size: 24px;
+}
+
+/* Recent Section */
+.recent-section {
+    padding: 80px 20px;
+    background: white;
+}
+
+.section-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1f2027;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.meeting-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto 40px;
+}
+
+.meeting-mini-card {
+    background: #f8f9fa;
+    padding: 24px;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+}
+
+.meeting-mini-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.meeting-mini-card h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.meeting-mini-card h3 a {
+    color: #1f2027;
+    text-decoration: none;
+}
+
+.meeting-mini-card h3 a:hover {
+    color: #8b5cf6;
+}
+
+.meeting-mini-card p {
+    color: #7b7e83;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.mini-location,
+.mini-date {
+    font-size: 14px;
+}
+
+/* Donation Section */
+.donation-section {
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.donation-card {
+    max-width: 600px;
+    margin: 0 auto 40px;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.donation-card h3 {
+    font-size: 28px;
+    color: #1f2027;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.progress-container {
+    width: 100%;
+    height: 40px;
+    background: #e9ecef;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.5s ease;
+}
+
+.progress-text {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.progress-percentage {
+    text-align: center;
+    font-size: 18px;
+    color: #7b7e83;
+    font-weight: 600;
+}
+
+.btn-view-all {
+    display: inline-block;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.btn-view-all:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.text-center {
+    text-align: center;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .home-container {
+        grid-template-columns: 1fr;
+        gap: 60px;
+    }
+
+    .hero-right {
+        max-height: none;
+    }
+
+    .hero-card {
+        min-height: 400px;
+    }
+
+    .hero-heading {
+        font-size: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-heading {
+        font-size: 32px;
+    }
+
+    .hero-text {
+        font-size: 18px;
+    }
+
+    .hero-challenge {
+        font-size: 20px;
+    }
+
+    .hero-question {
+        font-size: 16px;
+    }
+
+    .btn-explore {
+        padding: 14px 36px;
+        font-size: 16px;
+    }
+
+    .hero-card {
+        min-height: 300px;
+    }
+
+    .meeting-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .home-hero {
+        padding: 20px 10px;
+    }
+
+    .hero-left {
+        padding: 20px;
+    }
+
+    .hero-heading {
+        font-size: 28px;
+        margin-bottom: 16px;
+    }
+
+    .hero-text {
+        font-size: 16px;
+    }
+
+    .hero-challenge {
+        font-size: 18px;
+    }
+
+    .hero-question {
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+
+    .hero-right {
+        gap: 16px;
+    }
+}
+</style>
 {% endblock %}

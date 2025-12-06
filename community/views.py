@@ -200,16 +200,13 @@ def submission_create(request, meeting_id):
     """인증 제출 (모임 종료 후 호스트만)"""
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
-    # 호스트 확인
+    # ... (호스트 확인 및 중복 제출 확인 로직은 그대로 유지) ...
     if meeting.host_id != request.user:
         messages.error(request, '호스트만 인증을 제출할 수 있습니다.')
         return redirect('meeting_detail', meeting_id=meeting_id)
     
-    # 이미 제출했는지 확인
     existing_submission = MeetingSubmission.objects.filter(
-        meeting_id=meeting,
-        host_id=request.user,
-        status__in=['pending', 'ai_pass']
+        meeting_id=meeting, host_id=request.user, status__in=['pending', 'ai_pass']
     ).first()
     
     if existing_submission:
@@ -220,12 +217,16 @@ def submission_create(request, meeting_id):
         text_summary = request.POST.get('text_summary', '')
         scene_photo = request.FILES.get('scene_photo')
         
+        # [수정] 대표 셀카 1장만 받거나, 여러 장 중 첫 번째를 대표로 사용하도록 유도
+        # 여기서는 템플릿에서 'selfie_representative'라는 이름으로 파일 하나만 받는 것을 권장합니다.
+        # 기존 로직(참여자별 셀카)을 유지하려면, tasks.py가 그 중 하나만 골라서 검사한다는 점을 인지해야 합니다.
+        
         if not scene_photo:
             messages.error(request, '장소 사진을 업로드해주세요.')
             return render(request, 'community/submission_create.html', {'meeting': meeting})
         
         try:
-            # Submission 생성
+            # 1. Submission 생성
             submission = MeetingSubmission.objects.create(
                 meeting_id=meeting,
                 host_id=request.user,
@@ -233,38 +234,49 @@ def submission_create(request, meeting_id):
                 status='pending'
             )
             
-            # 장소 사진 업로드 (실제로는 S3나 파일 스토리지에 저장)
-            # 여기서는 URL을 시뮬레이션
+            # 2. 장소 사진 저장
             SubmissionMedia.objects.create(
                 submission_id=submission,
                 media_type='scene_photo',
-                file_url=f'/media/submissions/{submission.submission_id}/scene_photo.jpg'
+                file=scene_photo
             )
             
-            # 참여자 셀카 업로드
-            participants = MeetingParticipant.objects.filter(meeting_id=meeting)
-            for participant in participants:
-                selfie = request.FILES.get(f'selfie_{participant.user_id.user_id}')
-                if selfie:
+            # 3. 셀카 저장 (여러 장 업로드 처리)
+            # 템플릿에서 <input type="file" name="selfie_xxx"> 형태로 보낸다고 가정
+            has_selfie = False
+            for key, file in request.FILES.items():
+                if key.startswith('selfie'):
                     SubmissionMedia.objects.create(
                         submission_id=submission,
-                        user_id=participant.user_id,
+                        # user_id는 파일명이나 key에서 파싱해야 하지만, 복잡하면 NULL로 둠
                         media_type='selfie',
-                        file_url=f'/media/submissions/{submission.submission_id}/selfie_{participant.user_id.user_id}.jpg'
+                        file=file
                     )
+                    has_selfie = True
             
-            # AI 인증 프로세스 시작 (비동기로 처리 가능)
-            from .tasks import process_ai_verification
-            process_ai_verification(submission.submission_id)
-            
-            messages.success(request, '인증이 제출되었습니다. AI 검증을 진행합니다.')
+            if not has_selfie:
+                 messages.warning(request, '셀카가 없어 AI 검증 정확도가 낮을 수 있습니다.')
+
+            # 4. AI 검증 호출 (try-except로 감싸서 메인 로직 보호)
+            try:
+                # tasks.py가 같은 폴더(community)에 있어야 함
+                from .tasks import process_ai_verification
+                process_ai_verification(submission.submission_id)
+                messages.success(request, '인증 제출 완료! AI가 검증을 시작했습니다. (약 3~5초 소요)')
+            except ImportError:
+                messages.error(request, 'AI 검증 모듈을 찾을 수 없습니다. 관리자에게 문의하세요.')
+            except Exception as ai_error:
+                # AI가 실패해도 제출은 성공으로 처리하되, 경고 메시지 표시
+                print(f"AI Error: {ai_error}")
+                messages.warning(request, '제출은 완료되었으나 AI 검증 연결에 실패했습니다. 관리자가 수동으로 확인합니다.')
+
             return redirect('meeting_detail', meeting_id=meeting_id)
             
         except Exception as e:
             messages.error(request, f'제출 중 오류가 발생했습니다: {str(e)}')
             return render(request, 'community/submission_create.html', {'meeting': meeting})
     
-    # GET 요청: 참여자 목록 가져오기
+    # GET 요청
     participants = MeetingParticipant.objects.filter(meeting_id=meeting)
     context = {
         'meeting': meeting,

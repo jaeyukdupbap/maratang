@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+<link rel="stylesheet" href="{% static 'css/donation.css' %}">
 {% block title %}기부 - MoodGarden{% endblock %}
 
 {% block content %}
@@ -32,8 +33,7 @@
 
                     <div class="progress-section">
                         <div class="progress" style="background: #eee; border-radius: 8px; overflow: hidden;">
-                            <div class="progress-bar"
-                                 style="width: {{ active_pool.get_progress_percentage }}%; background: #ff8080; color: #fff; text-align: center;">
+                            <div class="progress-bar">
                                 {{ active_pool.get_progress_percentage }}%
                             </div>
                         </div>
