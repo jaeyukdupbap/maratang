@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+
+{% block title %}마이페이지 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="mypage-page">
+    <header class="mypage-header">
+        <div class="header-title">
+            <p class="eyebrow">My PAGE</p>
+            <h1>마이페이지</h1>
+            <p class="subtitle">보유 포인트와 모임, 펫 정보를 한눈에 확인하세요.</p>
+        </div>
+
+        <div class="metric-cards">
+            <div class="metric-card">
+                <p class="label">보유 포인트</p>
+                <h2>{{ user.total_points|default:0 }}P</h2>
+                <p class="muted">모임/상점/기부에 사용하세요</p>
+            </div>
+            {% if user_pet %}
+            <div class="metric-card">
+                <p class="label">펫 레벨</p>
+                <h2>{{ user_pet.current_level }}</h2>
+                <p class="muted">XP {{ user_pet.current_xp }}</p>
+            </div>
+            {% else %}
+            <div class="metric-card">
+                <p class="label">펫 상태</p>
+                <h2>미보유</h2>
+                <p class="muted">펫을 선택하고 성장하세요</p>
+            </div>
+            {% endif %}
+            <button type="button" class="metric-card metric-button host-modal-trigger">
+                <p class="label">호스트한 횟수</p>
+                <h2>{{ hosted_meetings|length|default:0 }}</h2>
+                <p class="muted">내가 만든 모임 수</p>
+            </button>
+            <div class="metric-card">
+                <p class="label">참여한 횟수</p>
+                <h2>{{ participated_meetings|length|default:0 }}</h2>
+                <p class="muted">참여 완료한 모임 수</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="mypage-layout">
+        <aside class="profile-card">
+            <div class="avatar-circle">{{ user.username|slice:":1"|upper }}</div>
+            <div class="profile-info">
+                <h3>{{ user.username }}</h3>
+                <p class="muted">{{ user.email }}</p>
+                <p class="muted">가입일 {{ user.created_at|date:"Y-m-d" }}</p>
+            </div>
+        </aside>
+
+        <section class="panel profile-panel">
+            <h3>프로필</h3>
+            <ul class="panel-list">
+                <li><span>이름</span><span>{{ user.username }}</span></li>
+                <li><span>이메일</span><span>{{ user.email }}</span></li>
+                <li><span>보유 포인트</span><span>{{ user.total_points }}P</span></li>
+            </ul>
+        </section>
+
+        <section class="panel security-panel">
+            <h3>보안 설정</h3>
+            <ul class="panel-list">
+                <li><span>비밀번호</span><span>변경 가능</span></li>
+                <li><span>로그인 기록</span><span><a href="{% url 'notifications' %}">알림 확인</a></span></li>
+            </ul>
+        </section>
+
+        <section class="panel meeting-panel">
+            <h3>모임 이력</h3>
+            <ul class="panel-list">
+                <li><span>호스트한 모임</span><span>{{ hosted_meetings|length|default:0 }}</span></li>
+                <li><span>참여한 모임</span><span>{{ participated_meetings|length|default:0 }}</span></li>
+            </ul>
+        </section>
+
+        <section class="panel full-span">
+            <h3>포인트 이력</h3>
+            {% if points_history %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>변동</th>
+                            <th>사유</th>
+                            <th>일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for history in points_history %}
+                            <tr>
+                                <td>{{ history.points_change|add:0|stringformat:"+d" }}P</td>
+                                <td>{{ history.get_reason_display }}</td>
+                                <td>{{ history.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="muted">포인트 이력이 없습니다.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+
+<div id="hostModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop host-modal-close"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <h4>호스트한 모임</h4>
+            <button type="button" class="modal-close host-modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+            {% if hosted_meetings %}
+                <ul class="modal-list">
+                    {% for meeting in hosted_meetings %}
+                        <li>
+                            <a href="{% url 'meeting_detail' meeting.meeting_id %}">
+                                {{ meeting.title }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted">호스트한 모임이 없습니다.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .mypage-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0b0c1a 0%, #1a1030 45%, #3a1c66 100%);
+        color: #e7e9f5;
+        padding: 32px 20px 60px;
+    }
+
+    .mypage-header {
+        max-width: 1200px;
+        margin: 0 auto 20px;
+        display: grid;
+        grid-template-columns: 1.2fr 2fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .header-title {
+        padding: 0;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .header-title h1 {
+        font-size: 32px;
+        margin: 4px 0 6px;
+        color: #f5f6ff;
+    }
+
+    .header-title .subtitle {
+        color: #cdd2ff;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .eyebrow {
+        font-size: 13px;
+        font-weight: 700;
+        color: #ff9fb3;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .metric-cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 12px;
+    }
+
+    .metric-card {
+        background: rgba(33, 36, 64, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .metric-button {
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        background: rgba(33, 36, 64, 0.9);
+        color: inherit;
+    }
+
+    .metric-card h2 {
+        margin: 6px 0 4px;
+        font-size: 28px;
+        font-weight: 800;
+        color: #f5f6ff;
+    }
+
+    .metric-card .label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #a9b4ff;
+        letter-spacing: 0.05em;
+    }
+
+    .metric-card .muted {
+        margin: 0;
+        color: #c9cde5;
+        font-size: 13px;
+    }
+
+    .mypage-layout {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1.05fr 1.95fr;
+        gap: 16px;
+    }
+
+    .profile-card {
+        background: rgba(33, 36, 64, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        grid-row: span 3;
+    }
+
+    .avatar-circle {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 22px;
+        color: #fff;
+    }
+
+    .profile-info h3 {
+        margin: 0;
+        font-size: 20px;
+        color: #f5f6ff;
+    }
+
+    .profile-info .muted {
+        margin: 0;
+        color: #cdd2ff;
+    }
+
+    .panel {
+        background: rgba(33, 36, 64, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .profile-panel {
+        grid-column: 2;
+    }
+
+    .security-panel {
+        grid-column: 2;
+    }
+
+    .meeting-panel {
+        grid-column: 1 / span 2;
+    }
+
+    .panel.full-span {
+        grid-column: span 2;
+    }
+
+    .panel h3 {
+        margin: 0 0 12px;
+        color: #f5f6ff;
+    }
+
+    .panel-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .panel-list li {
+        display: flex;
+        justify-content: space-between;
+        color: #d9def7;
+        font-size: 14px;
+    }
+
+    .panel-list a {
+        color: #9db5ff;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #111;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .table th, .table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        text-align: left;
+        color: #111;
+    }
+
+    .table thead {
+        background: rgba(0, 0, 0, 0.04);
+        color: #0f172a;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 800;
+    }
+
+    .table tbody tr {
+        background: rgba(255, 255, 255, 0.98);
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background: rgba(245, 246, 250, 0.98);
+    }
+
+    .table tbody tr:hover {
+        background: rgba(232, 235, 243, 0.98);
+        transform: translateY(-1px);
+    }
+
+    .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+    }
+
+    .modal.show {
+        display: flex;
+    }
+
+    .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-dialog {
+        position: relative;
+        background: rgba(33, 36, 64, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        width: min(420px, 90vw);
+        z-index: 1;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        color: #f5f6ff;
+    }
+
+    .modal-close {
+        border: none;
+        background: transparent;
+        color: #f5f6ff;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .modal-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-list a {
+        color: #9db5ff;
+        text-decoration: none;
+    }
+
+    .modal-list a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 1024px) {
+        .mypage-header {
+            grid-template-columns: 1fr;
+        }
+        .mypage-layout {
+            grid-template-columns: 1fr;
+        }
+        .profile-card {
+            grid-row: span 1;
+        }
+        .profile-panel,
+        .security-panel,
+        .meeting-panel {
+            grid-column: span 1;
+        }
+        .panel.full-span {
+            grid-column: span 1;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .metric-cards {
+            grid-template-columns: 1fr 1fr;
+        }
+        .panel-list li {
+            flex-direction: column;
+            gap: 4px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const hostTrigger = document.querySelector('.host-modal-trigger');
+        const hostModal = document.getElementById('hostModal');
+        const closeButtons = document.querySelectorAll('.host-modal-close');
+
+        if (hostTrigger && hostModal) {
+            hostTrigger.addEventListener('click', () => {
+                hostModal.classList.add('show');
+                hostModal.setAttribute('aria-hidden', 'false');
+            });
+
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hostModal.classList.remove('show');
+                    hostModal.setAttribute('aria-hidden', 'true');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

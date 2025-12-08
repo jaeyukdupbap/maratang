@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}동물 키우기 - MoodGarden{% endblock %}
+
+{% block content %}
+<div class="growth-page">
+    <section class="growth-hero">
+        <div class="hero-text">
+            <p class="eyebrow">나의 펫 성장 현황</p>
+            <h1>동물 키우기</h1>
+            <p class="subtitle">포인트로 펫을 성장시키고 아이템을 장착해 보세요.</p>
+            <div class="hero-actions">
+                <a class="btn-primary" href="{% url 'shop' %}">상점 바로가기</a>
+            </div>
+        </div>
+        <div class="hero-highlight">
+            <div class="highlight-card">
+                <p class="label">보유 포인트</p>
+                <h2>{{ user_points|default:0 }}P</h2>
+                <p class="muted">아이템 구매에 사용됩니다</p>
+            </div>
+            {% if user_pet %}
+            <div class="highlight-card">
+                <p class="label">현재 레벨</p>
+                <h2>{{ user_pet.current_level|default:1 }}</h2>
+                <p class="muted">{{ user_pet.current_xp|default:0 }} / {{ user_pet.max_xp|default:0 }} XP</p>
+            </div>
+            {% else %}
+            <div class="highlight-card">
+                <p class="label">펫 상태</p>
+                <h2>미보유</h2>
+                <p class="muted">펫을 선택하고 성장시켜보세요</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="container card-surface">
+    <h1 style="margin-top:0;">동물 키우기</h1>
+    
+    <div class="pet-section">
+        <h2>내 동물</h2>
+        {% if user_pet %}
+            <div class="pet-display">
+                <!-- 현재 레벨에 맞는 펫 이미지 표시 -->
+                {% with formatted_level=user_pet.current_level|stringformat:"03d" %}
+                {% with image_path='growth/pet/'|add:user_pet.pet_type|add:'/ezgif-frame-'|add:formatted_level|add:'.png' %}
+                    <div class="pet-image">
+                        <img src="{% static image_path %}" 
+                             alt="{{ user_pet.get_pet_type_display }}" 
+                             loading="lazy">
+                    </div>
+                {% endwith %}
+                {% endwith %}
+                
+                <div class="pet-info">
+                    <p><strong>종류:</strong> {{ user_pet.get_pet_type_display }}</p>
+                    <p><strong>레벨:</strong> {{ user_pet.current_level }}</p>
+                    <p><strong>XP:</strong> {{ user_pet.current_xp }} / {{ user_pet.max_xp }}</p>
+                    <div class="xp-bar">
+                        <div class="xp-fill" data-xp="{% widthratio user_pet.current_xp user_pet.max_xp 100 %}"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="inventory-section">
+                <h3>장착 중인 아이템</h3>
+                {% if inventory %}
+                    <ul>
+                        {% for item in inventory %}
+                            <li>{{ item.item_id.item_name }} 
+                                <a href="{% url 'equip_item' item.inventory_id %}" class="btn btn-sm btn-secondary">해제</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>장착 중인 아이템이 없습니다.</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="no-pet-section">
+                <p>아직 펫이 없습니다.</p>
+                <p class="no-pet-message">펫을 선택하여 함께 성장해보세요!</p>
+                <a href="{% url 'pet_select' %}" class="btn btn-primary btn-lg">펫을 선택하겠습니다</a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="shop-section">
+        <div class="item-list">
+            {% for item in items %}
+                <div class="item-card">
+                    <h4>{{ item.item_name }}</h4>
+                    <p>타입: {{ item.get_item_type_display }}</p>
+                    <p>필요 레벨: {{ item.required_level }}</p>
+                    <p>가격: {{ item.cost }}P</p>
+                    
+                    {% if item.item_id in owned_item_ids %}
+                        <span class="badge badge-info">보유 중</span>
+                    {% elif user_pet and user_pet.current_level < item.required_level %}
+                        <span class="badge badge-warning">레벨 부족</span>
+                    {% elif user_points < item.cost %}
+                        <span class="badge badge-danger">포인트 부족</span>
+                    {% else %}
+                        <a href="{% url 'purchase_item' item.item_id %}" class="btn btn-primary">구매</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="points-history-section">
+        <h2>포인트 이력</h2>
+        {% if points_history %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>변동</th>
+                        <th>사유</th>
+                        <th>일시</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in points_history %}
+                        <tr>
+                            <td>{{ history.points_change|add:0|stringformat:"+d" }}P</td>
+                            <td>{{ history.get_reason_display }}</td>
+                            <td>{{ history.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>포인트 이력이 없습니다.</p>
+        {% endif %}
+    </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.xp-fill').forEach(function(el) {
+        var xp = parseFloat(el.dataset.xp || '0');
+        if (isNaN(xp)) xp = 0;
+        el.style.width = xp + '%';
+    });
+});
+</script>
+
+<style>
+    .growth-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0b0c1a 0%, #1a1030 45%, #3a1c66 100%);
+        color: #e7e9f5;
+        padding: 0 0 60px;
+    }
+
+    .growth-hero {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 20px 16px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 24px;
+        background:
+            linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(118, 75, 162, 0.24)),
+            rgba(18, 20, 42, 0.78);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .hero-text h1 {
+        margin: 6px 0 12px;
+        font-size: 32px;
+        font-weight: 800;
+        color: #f5f6ff;
+    }
+
+    .hero-text .subtitle {
+        color: #cdd2ff;
+        line-height: 1.6;
+        margin-bottom: 18px;
+    }
+
+    .eyebrow {
+        font-size: 13px;
+        font-weight: 700;
+        color: #ff9fb3;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(118, 75, 162, 0.25);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(118, 75, 162, 0.3);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f5f6ff;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.14);
+    }
+
+    .hero-highlight {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .highlight-card {
+        background: rgba(33, 36, 64, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .highlight-card h2 {
+        margin: 6px 0 4px;
+        font-size: 28px;
+        font-weight: 800;
+        color: #f5f6ff;
+    }
+
+    .highlight-card .label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #a9b4ff;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0;
+    }
+
+    .highlight-card .muted {
+        margin: 0;
+        color: #c9cde5;
+        font-size: 13px;
+    }
+
+    .card-surface {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+        background: rgba(18, 20, 42, 0.72);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .card-surface h1,
+    .card-surface h2,
+    .card-surface h3,
+    .card-surface p,
+    .card-surface li,
+    .card-surface span,
+    .card-surface a,
+    .card-surface strong {
+        color: #e7e9f5;
+    }
+
+    .card-surface a {
+        color: #9db5ff;
+    }
+
+    .card-surface table {
+        color: #0f172a;
+        background: #f8f9fd;
+    }
+
+    .card-surface table th,
+    .card-surface table td {
+        color: #0f172a;
+        border-bottom: 1px solid #e3e7f3;
+    }
+
+    .card-surface table thead {
+        background: #edf0fb;
+        color: #0f172a;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+    }
+
+    .card-surface .badge {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f5f6ff;
+    }
+
+    .card-surface .badge-warning { color: #ffdd8a; }
+    .card-surface .badge-danger { color: #ff9fb3; }
+    .card-surface .badge-info { color: #9db5ff; }
+
+    .pet-display {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .pet-image {
+        flex-shrink: 0;
+        width: 250px;
+        height: 250px;
+        background-color: rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(255, 255, 255, 0.12);
+    }
+    
+    .pet-image img {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+    }
+    
+    .pet-info {
+        flex: 1;
+        min-width: 250px;
+    }
+    
+    .pet-info p {
+        font-size: 1.1rem;
+        margin: 10px 0;
+        color: #e7e9f5;
+    }
+    
+    .xp-bar {
+        width: 100%;
+        height: 30px;
+        background-color: rgba(255, 255, 255, 0.08);
+        border-radius: 15px;
+        overflow: hidden;
+        margin-top: 15px;
+    }
+    
+    .xp-fill {
+        height: 100%;
+        background-color: #8a7bff;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fefefe;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .no-pet-section {
+        text-align: center;
+        padding: 40px 20px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+    
+    .no-pet-section p {
+        font-size: 1.2rem;
+        color: #d4d7ef;
+        margin: 10px 0;
+    }
+    
+    .no-pet-message {
+        font-size: 1rem !important;
+        color: #c0c5e0 !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .btn-lg {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #9d8fff 0%, #c065ff 100%);
+    }
+
+    @media (max-width: 960px) {
+        .growth-hero {
+            grid-template-columns: 1fr;
+        }
+        .hero-text h1 {
+            font-size: 28px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .hero-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+{% endblock %}
+
