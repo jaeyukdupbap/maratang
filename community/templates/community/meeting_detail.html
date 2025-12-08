@@ -20,7 +20,6 @@
             <p><strong>호스트:</strong> {{ meeting.host_id.username }}</p>
             <p><strong>설명:</strong> {{ meeting.description }}</p>
             <p><strong>장소:</strong> {{ meeting.location_name }}</p>
-            <p><strong>좌표:</strong> {{ meeting.location_coords }}</p>
             <p><strong>일시:</strong> {{ meeting.meeting_date|date:"Y-m-d H:i" }}</p>
             <p><strong>정원:</strong> {{ participant_count }} / {{ meeting.capacity }}</p>
         </div>

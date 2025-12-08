@@ -4,10 +4,43 @@
 {% block title %}기부 - MoodGarden{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>기부 돼지저금통</h1>
+<div class="donation-page">
+    <section class="donation-hero">
+        <div class="hero-text">
+            <p class="eyebrow">따뜻한 손길 모으기 ✨</p>
+            <h1>기부 돼지저금통</h1>
+            <p class="subtitle">
+                작은 포인트가 모여 큰 변화를 만들어요. 지금 참여하고 기부 내역을 확인해보세요.
+            </p>
+        </div>
+        <div class="hero-highlight">
+            <div class="highlight-card">
+                <p class="label">진행률</p>
+                <h2>{{ active_pool.get_progress_percentage|default:"0" }}%</h2>
+                <p class="muted">목표까지 함께 달려요</p>
+            </div>
+            <div class="highlight-card">
+                <p class="label">누적 포인트</p>
+                <h2>{{ active_pool.current_points|default:0 }}P</h2>
+                <p class="muted">{{ active_pool.goal_points|default:0 }}P 목표</p>
+            </div>
+            <div class="highlight-card">
+                <p class="label">내 기여도</p>
+                <h2>
+                    {% if user.is_authenticated %}
+                        {{ user_contribution|default:0 }}P
+                    {% else %}
+                        - 
+                    {% endif %}
+                </h2>
+                <p class="muted">지금 참여하고 기록하세요</p>
+            </div>
+        </div>
+    </section>
 
-    <div class="layout" style="display: flex; gap: 2rem;">
+    <div class="container card-surface">
+
+    <div class="layout donation-layout">
         {# 좌측 패널: 관리자 전용 버튼 #}
         <aside style="flex: 1;">
             {% if user.is_staff %}
@@ -19,7 +52,7 @@
         </aside>
 
         {# 중앙 패널: 돼지저금통 + 진행률 #}
-        <main style="flex: 2;">
+        <main style="flex: 2;" id="donationPool">
             {% if active_pool %}
                 <div class="donation-pool">
                     <h2>{{ active_pool.title }}</h2>
@@ -28,16 +61,15 @@
                     {% endif %}
 
                     <div class="pig-image">
-                        <img src="{% static 'donation/pig.png' %}" alt="기부 돼지저금통" style="max-width: 200px;">
+                        <img src="{% static 'donation/pig.png' %}" alt="기부 돼지저금통">
                     </div>
 
                     <div class="progress-section">
-                        <div class="progress" style="background: #eee; border-radius: 8px; overflow: hidden;">
-                            <div class="progress-bar">
-                                {{ active_pool.get_progress_percentage }}%
-                            </div>
+                        <div class="progress ghost-track">
+                            <div class="progress-bar static-five"></div>
                         </div>
-                        <p>
+                        <p class="progress-caption">
+                            진행률 {{ active_pool.get_progress_percentage|default:"0" }}% &nbsp;|&nbsp;
                             {{ active_pool.current_points|default:0 }} / {{ active_pool.goal_points }} 포인트
                         </p>
                     </div>
@@ -122,6 +154,245 @@
             <p>진행 중인 캠페인이 없습니다.</p>
         {% endif %}
     </section>
+</div>
+
+<style>
+.donation-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0b0c1a 0%, #1a1030 45%, #3a1c66 100%);
+    color: #e7e9f5;
+}
+
+.donation-hero {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 20px 12px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(118, 75, 162, 0.24)),
+        rgba(18, 20, 42, 0.75);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.hero-text h1 {
+    margin: 6px 0 12px;
+    font-size: 36px;
+    font-weight: 700;
+    color: #f5f6ff;
+}
+
+.hero-text .subtitle {
+    color: #cdd2ff;
+    line-height: 1.6;
+    margin-bottom: 18px;
+}
+
+.eyebrow {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ff9fb3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(118, 75, 162, 0.25);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(118, 75, 162, 0.3);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2027;
+    border: 2px solid rgba(31, 32, 39, 0.08);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    border-color: rgba(31, 32, 39, 0.18);
+    background: #fff;
+}
+
+.hero-highlight {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.highlight-card {
+    background: rgba(33, 36, 64, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.highlight-card h2 {
+    margin: 6px 0 4px;
+    font-size: 28px;
+    font-weight: 800;
+    color: #f5f6ff;
+}
+
+.highlight-card .label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #a9b4ff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.highlight-card .muted {
+    margin: 0;
+    color: #c9cde5;
+    font-size: 13px;
+}
+
+.card-surface {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 20px 40px;
+    background: rgba(18, 20, 42, 0.72);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.card-surface h2,
+.card-surface h3 {
+    color: #f5f6ff;
+}
+
+.card-surface p,
+.card-surface li,
+.card-surface span,
+.card-surface a {
+    color: #d9def7;
+}
+
+.donation-pool .progress {
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.donation-pool .progress-bar {
+    background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
+    color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.top-donors ol {
+    padding-left: 18px;
+}
+
+.donation-item {
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.donation-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.donation-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.donation-layout > aside {
+    flex: 1;
+}
+
+.donation-layout > main {
+    flex: 2;
+}
+
+.donation-layout > aside:last-of-type {
+    flex: 2;
+}
+
+.pig-image img {
+    max-width: 280px;
+    width: 100%;
+}
+
+.progress-section {
+    margin-top: 12px;
+}
+
+.ghost-track {
+    position: relative;
+}
+
+.ghost-track .static-five {
+    width: 5%;
+    min-width: 5%;
+}
+
+.progress-caption {
+    margin-top: 6px;
+    color: #d9def7;
+    font-size: 14px;
+}
+
+@media (max-width: 960px) {
+    .donation-hero {
+        grid-template-columns: 1fr;
+        background-size: 140px;
+    }
+
+    .hero-text h1 {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 640px) {
+    .hero-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<!-- Page wrapper close -->
 </div>
 
 {# 상세 모달 #}

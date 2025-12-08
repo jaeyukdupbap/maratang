@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from .models import CommunityMeeting, MeetingParticipant, MeetingSubmission, SubmissionMedia
 from account.models import User
+from django.db import transaction
 
 # Create your views here.
 
@@ -200,13 +201,14 @@ def submission_create(request, meeting_id):
     """인증 제출 (모임 종료 후 호스트만)"""
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
-    # ... (호스트 확인 및 중복 제출 확인 로직은 그대로 유지) ...
+    # 1. 권한 체크
     if meeting.host_id != request.user:
         messages.error(request, '호스트만 인증을 제출할 수 있습니다.')
         return redirect('meeting_detail', meeting_id=meeting_id)
     
+    # 2. 중복 제출 체크
     existing_submission = MeetingSubmission.objects.filter(
-        meeting_id=meeting, host_id=request.user, status__in=['pending', 'ai_pass']
+        meeting_id=meeting, host_id=request.user, status__in=['pending', 'ai_pass', 'admin_pass']
     ).first()
     
     if existing_submission:
@@ -217,58 +219,72 @@ def submission_create(request, meeting_id):
         text_summary = request.POST.get('text_summary', '')
         scene_photo = request.FILES.get('scene_photo')
         
-        # [수정] 대표 셀카 1장만 받거나, 여러 장 중 첫 번째를 대표로 사용하도록 유도
-        # 여기서는 템플릿에서 'selfie_representative'라는 이름으로 파일 하나만 받는 것을 권장합니다.
-        # 기존 로직(참여자별 셀카)을 유지하려면, tasks.py가 그 중 하나만 골라서 검사한다는 점을 인지해야 합니다.
-        
         if not scene_photo:
             messages.error(request, '장소 사진을 업로드해주세요.')
             return render(request, 'community/submission_create.html', {'meeting': meeting})
         
         try:
-            # 1. Submission 생성
-            submission = MeetingSubmission.objects.create(
-                meeting_id=meeting,
-                host_id=request.user,
-                text_summary=text_summary,
-                status='pending'
-            )
-            
-            # 2. 장소 사진 저장
-            SubmissionMedia.objects.create(
-                submission_id=submission,
-                media_type='scene_photo',
-                file=scene_photo
-            )
-            
-            # 3. 셀카 저장 (여러 장 업로드 처리)
-            # 템플릿에서 <input type="file" name="selfie_xxx"> 형태로 보낸다고 가정
-            has_selfie = False
-            for key, file in request.FILES.items():
-                if key.startswith('selfie'):
-                    SubmissionMedia.objects.create(
-                        submission_id=submission,
-                        # user_id는 파일명이나 key에서 파싱해야 하지만, 복잡하면 NULL로 둠
-                        media_type='selfie',
-                        file=file
-                    )
-                    has_selfie = True
-            
-            if not has_selfie:
-                 messages.warning(request, '셀카가 없어 AI 검증 정확도가 낮을 수 있습니다.')
+            # 🚀 [핵심] 트랜잭션 시작 (중간에 에러나면 전체 롤백)
+            with transaction.atomic():
+                # 1. Submission 생성
+                submission = MeetingSubmission.objects.create(
+                    meeting_id=meeting,
+                    host_id=request.user,
+                    text_summary=text_summary,
+                    status='pending'
+                )
+                
+                # 2. 장소 사진 저장
+                SubmissionMedia.objects.create(
+                    submission_id=submission,
+                    media_type='scene_photo',
+                    file=scene_photo
+                )
+                
+                # 3. 셀카 저장 (수정된 로직)
+                has_selfie = False
+                
+                # request.FILES의 모든 키를 순회
+                for key in request.FILES:
+                    if key.startswith('selfie'):
+                        # 3-1. user_id 파싱 (HTML의 name="selfie_{{ user_id }}"에서 ID 추출)
+                        target_user_id = None
+                        try:
+                            # 'selfie_123' -> ['selfie', '123']
+                            parts = key.split('_')
+                            if len(parts) > 1:
+                                target_user_id = parts[1] # 모델 타입에 따라 int(parts[1])이 필요할 수도 있음
+                        except Exception:
+                            target_user_id = None
 
-            # 4. AI 검증 호출 (try-except로 감싸서 메인 로직 보호)
+                        # 3-2. [중요] getlist를 사용하여 파일이 여러 개일 경우 모두 가져옴
+                        # (혹시 input에 multiple 속성을 썼을 경우 대비)
+                        file_list = request.FILES.getlist(key)
+                        
+                        for f in file_list:
+                            SubmissionMedia.objects.create(
+                                submission_id=submission,
+                                media_type='selfie',
+                                user_id_id=target_user_id, # 누구 사진인지 DB에 기록
+                                file=f
+                            )
+                            has_selfie = True
+                
+                if not has_selfie:
+                     messages.warning(request, '셀카가 없어 AI 검증 정확도가 낮을 수 있습니다.')
+
+            # 4. AI 검증 호출 (DB 저장 후 트랜잭션 밖에서 호출 권장이나, 로직상 여기에 위치)
             try:
-                # tasks.py가 같은 폴더(community)에 있어야 함
                 from .tasks import process_ai_verification
                 process_ai_verification(submission.submission_id)
-                messages.success(request, '인증 제출 완료! AI가 검증을 시작했습니다. (약 3~5초 소요)')
+                messages.success(request, '인증 제출 완료! AI가 검증을 진행 중입니다.')
             except ImportError:
-                messages.error(request, 'AI 검증 모듈을 찾을 수 없습니다. 관리자에게 문의하세요.')
-            except Exception as ai_error:
-                # AI가 실패해도 제출은 성공으로 처리하되, 경고 메시지 표시
-                print(f"AI Error: {ai_error}")
-                messages.warning(request, '제출은 완료되었으나 AI 검증 연결에 실패했습니다. 관리자가 수동으로 확인합니다.')
+                messages.warning(request, '제출 완료 (AI 모듈 없음)')
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"AI Verification Error: {e}")
+                messages.warning(request, '제출은 완료되었으나 AI 검증 요청 중 오류가 발생했습니다.')
 
             return redirect('meeting_detail', meeting_id=meeting_id)
             

@@ -18,7 +18,7 @@
             {% else %}
                 <a href="{% url 'login' %}" class="btn-create">로그인하고 모임 만들기</a>
             {% endif %}
-            <a href="{% url 'community' %}" class="btn-view-more">더 보기</a>
+            <a href="{% url 'community' %}" class="btn-view-more">검색</a>
         </div>
     </section>
 
@@ -99,8 +99,9 @@
 <style>
 .community-wrapper {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #0b0c1a 0%, #1a1030 45%, #3a1c66 100%);
     padding: 40px 20px 80px;
+    color: #e7e9f5;
 }
 
 /* Hero Section */
@@ -112,6 +113,11 @@
     align-items: flex-end;
     gap: 32px;
     flex-wrap: wrap;
+    background: rgba(18, 20, 42, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
 .hero-content {
@@ -122,7 +128,7 @@
 .eyebrow {
     font-size: 14px;
     font-weight: 600;
-    color: #ff6b81;
+    color: #ff9fb3;
     letter-spacing: 0.05em;
     margin-bottom: 8px;
 }
@@ -130,14 +136,14 @@
 .community-hero h1 {
     font-size: 36px;
     font-weight: 700;
-    color: #1f2027;
+    color: #f5f6ff;
     margin: 0 0 12px;
     line-height: 1.2;
 }
 
 .subtitle {
     font-size: 16px;
-    color: #7b7e83;
+    color: #cdd2ff;
     margin: 0;
 }
 
@@ -171,14 +177,14 @@
 }
 
 .btn-view-more {
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f2027;
-    border: 2px solid rgba(31, 32, 39, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f6ff;
+    border: 2px solid rgba(255, 255, 255, 0.16);
 }
 
 .btn-view-more:hover {
-    background: white;
-    border-color: rgba(31, 32, 39, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* Cards Section */
@@ -212,10 +218,11 @@
 .meeting-card {
     min-width: 320px;
     max-width: 320px;
-    background: white;
+    background: rgba(255, 255, 255, 0.04);
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -223,7 +230,7 @@
 
 .meeting-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
 }
 
 .card-image-wrapper {
@@ -285,11 +292,12 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    color: #e7e9f5;
 }
 
 .card-location {
     font-size: 13px;
-    color: #7b7e83;
+    color: #c9cde5;
     margin: 0;
 }
 
@@ -301,7 +309,7 @@
 }
 
 .card-title a {
-    color: #1f2027;
+    color: #f5f6ff;
     text-decoration: none;
     transition: color 0.3s ease;
 }
@@ -312,7 +320,7 @@
 
 .card-description {
     font-size: 14px;
-    color: #7b7e83;
+    color: #d9def7;
     line-height: 1.5;
     margin: 0;
     flex: 1;
@@ -322,7 +330,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 13px;
-    color: #7b7e83;
+    color: #c9cde5;
     padding-top: 8px;
     border-top: 1px solid #f0f0f0;
 }
@@ -346,23 +354,23 @@
 }
 
 .btn-join:not(.joined):not(.host) {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
     color: white;
 }
 
 .btn-join:hover:not(.joined):not(.host) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(176, 75, 255, 0.35);
 }
 
 .btn-join.joined {
-    background: #f0f0f0;
-    color: #7b7e83;
+    background: rgba(255, 255, 255, 0.08);
+    color: #c9cde5;
 }
 
 .btn-join.host {
-    background: #fff5f5;
-    color: #ff6b81;
+    background: rgba(255, 159, 179, 0.12);
+    color: #ff9fb3;
 }
 
 /* Scroll Buttons */
@@ -373,7 +381,7 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     border: none;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     cursor: pointer;

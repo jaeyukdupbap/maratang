@@ -75,6 +75,13 @@ class SubmissionMedia(models.Model):
         ('selfie', '셀카'),
     ]
     
+    AI_VERIFICATION_STATUS_CHOICES = [
+        ('pending', 'AI 검증 대기'),
+        ('processing', 'AI 검증 중'),
+        ('completed', 'AI 검증 완료'),
+        ('failed', 'AI 검증 실패'),
+    ]
+    
     media_id = models.AutoField(primary_key=True)
     submission_id = models.ForeignKey(MeetingSubmission, on_delete=models.CASCADE, related_name='media_files', db_column='submission_id')
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='submission_media', db_column='user_id', 
@@ -83,6 +90,13 @@ class SubmissionMedia(models.Model):
     # store uploaded file using Django storage (local MEDIA or configured S3/etc.)
     file = models.FileField(upload_to='submission_media/%Y/%m/%d/', max_length=500, null=True, blank=True,
                             help_text="업로드된 파일(로컬 또는 스토리지)")
+    # AI 검증 관련 필드
+    ai_verification_status = models.CharField(max_length=20, choices=AI_VERIFICATION_STATUS_CHOICES, default='pending',
+                                              help_text="AI 검증 상태")
+    ai_verification_score = models.FloatField(null=True, blank=True, 
+                                              help_text="AI 유사도 점수 (0.0~1.0), scene_photo와 selfie 비교 결과")
+    ai_verification_at = models.DateTimeField(null=True, blank=True,
+                                              help_text="AI 검증 실행 시간")
     # 관리자 처리 정보 (누가 언제 처리했는지 감사용)
     processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                      related_name='processed_media', db_column='processed_by')
