@@ -2,14 +2,14 @@
 @Project : Mood Garden (Community & Donation Platform)
 @File    : growth/views.py
 @Author  : Minsu Kim (Backend & Infra)
-@Date    : 2025-12-03
-@Description : 펫 시스템 및 포인트 상점 관리. 펫 선택, 성장 조회, 아이템 구매 기능을 제공합니다.
+@Date    : 2025-12-09
+@Description : 펫 시스템 및 마이룸 관리. 펫 선택, 성장 조회, 아이템/가구 구매, 마이룸 꾸미기 기능을 제공합니다.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import PetItem, UserPet, UserInventory, PointsHistory
+from .models import PetItem, UserPet, UserInventory, PointsHistory, RoomItem, UserRoomDecoration
 from account.models import User
 
 # Create your views here.
@@ -262,14 +262,234 @@ def change_pet(request):
 @login_required
 def shop(request):
     """
-    상점 페이지
+    상점 페이지 (펫 아이템 & 마이룸 가구)
     
-    펫 아이템 상점 페이지를 표시합니다.
+    펫 아이템과 마이룸 가구를 탭 형태로 표시합니다.
     
     Args:
         request (HttpRequest): 사용자 요청 객체
         
     Returns:
         HttpResponse: shop.html 템플릿 렌더링
+        
+    Context:
+        pet_items: 구매 가능한 펫 아이템
+        room_items: 구매 가능한 마이룸 가구
+        owned_pet_items: 구매한 펫 아이템 ID 세트
+        owned_room_items: 구매한 마이룸 아이템 ID 세트
+        user_pet: 사용자의 펫
+        user_points: 사용자의 현재 포인트
     """
-    return render(request, 'shop.html')
+    from .models import RoomItem, UserRoomDecoration
+    
+    # 펫 아이템
+    pet_items = PetItem.objects.all().order_by('required_level', 'cost')
+    
+    # 마이룸 아이템
+    room_items = RoomItem.objects.all().order_by('category', 'cost')
+    
+    # 사용자 인벤토리 확인
+    owned_pet_items = set(UserInventory.objects.filter(user_id=request.user).values_list('item_id', flat=True))
+    owned_room_items = set(UserRoomDecoration.objects.filter(user_id=request.user).values_list('room_item_id', flat=True))
+    
+    # 사용자 펫
+    try:
+        user_pet = UserPet.objects.get(user_id=request.user)
+    except UserPet.DoesNotExist:
+        user_pet = None
+    
+    context = {
+        'pet_items': pet_items,
+        'room_items': room_items,
+        'owned_pet_items': owned_pet_items,
+        'owned_room_items': owned_room_items,
+        'user_pet': user_pet,
+        'user_points': request.user.total_points,
+    }
+    return render(request, 'growth/shop.html', context)
+
+
+@login_required
+def buy_room_item(request, room_item_id):
+    """
+    마이룸 가구 구매
+    
+    사용자가 마이룸 가구를 구매합니다.
+    포인트를 차감하고 UserRoomDecoration에 배치 기록을 저장합니다.
+    
+    Args:
+        request (HttpRequest): 사용자 요청 객체
+        room_item_id (int): 구매할 가구 아이템 ID
+        
+    Returns:
+        HttpResponse: shop 페이지로 리다이렉트
+        
+    Side Effects:
+        - User.total_points 감소
+        - PointsHistory 생성
+        - UserRoomDecoration 생성
+    """
+    from .models import RoomItem, UserRoomDecoration
+    
+    room_item = get_object_or_404(RoomItem, room_item_id=room_item_id)
+    
+    # 포인트 확인
+    if request.user.total_points < room_item.cost:
+        messages.error(request, '포인트가 부족합니다.')
+        return redirect('shop')
+    
+    # 이미 구매했는지 확인
+    if UserRoomDecoration.objects.filter(user_id=request.user, room_item_id=room_item).exists():
+        messages.warning(request, '이미 구매한 아이템입니다.')
+        return redirect('shop')
+    
+    try:
+        # 포인트 차감
+        request.user.total_points -= room_item.cost
+        request.user.save()
+        
+        # 포인트 이력 기록
+        PointsHistory.objects.create(
+            user_id=request.user,
+            points_change=-room_item.cost,
+            reason='item_purchase'
+        )
+        
+        # 마이룸 배치 기록 생성 (기본 위치로)
+        UserRoomDecoration.objects.create(
+            user_id=request.user,
+            room_item_id=room_item,
+            position_top=room_item.default_top,
+            position_left=room_item.default_left,
+            is_displayed=True
+        )
+        
+        messages.success(request, f'{room_item.item_name}을(를) 구매했습니다.')
+    except Exception as e:
+        messages.error(request, f'구매 중 오류가 발생했습니다: {str(e)}')
+    
+    return redirect('shop')
+
+
+@login_required
+def my_room(request):
+    """
+    마이룸 조회 페이지
+    
+    사용자의 펫과 배치된 가구들을 표시합니다.
+    
+    Args:
+        request (HttpRequest): 사용자 요청 객체
+        
+    Returns:
+        HttpResponse: my_room.html 템플릿 렌더링
+        
+    Context:
+        user_pet: 사용자의 펫 정보
+        decorations: 표시 중인 마이룸 가구들
+        all_decorations: 구매한 모든 가구들
+    """
+    from .models import UserRoomDecoration
+    
+    # 사용자 펫
+    try:
+        user_pet = UserPet.objects.get(user_id=request.user)
+    except UserPet.DoesNotExist:
+        messages.warning(request, '먼저 펫을 선택해주세요.')
+        return redirect('pet_select')
+    
+    # 표시 중인 가구들 (z-index 순서로)
+    decorations = UserRoomDecoration.objects.filter(
+        user_id=request.user,
+        is_displayed=True
+    ).select_related('room_item_id').order_by('room_item_id__z_index')
+    
+    # 모든 가구들 (배치 관리용)
+    all_decorations = UserRoomDecoration.objects.filter(
+        user_id=request.user
+    ).select_related('room_item_id').order_by('room_item_id__z_index')
+    
+    context = {
+        'user_pet': user_pet,
+        'decorations': decorations,
+        'all_decorations': all_decorations,
+    }
+    return render(request, 'growth/my_room.html', context)
+
+
+@login_required
+def update_decoration_position(request, decoration_id):
+    """
+    마이룸 가구 위치 변경
+    
+    사용자가 가구의 위치를 드래그 앤 드롭으로 변경합니다.
+    AJAX POST 요청으로 처리합니다.
+    
+    Args:
+        request (HttpRequest): POST 요청 객체
+            - position_top (int): 새로운 top 위치 (px)
+            - position_left (int): 새로운 left 위치 (px)
+        decoration_id (int): 배치 ID
+        
+    Returns:
+        JsonResponse: {'status': 'success'} 또는 오류 메시지
+    """
+    from django.http import JsonResponse
+    from .models import UserRoomDecoration
+    
+    try:
+        decoration = UserRoomDecoration.objects.get(
+            decoration_id=decoration_id,
+            user_id=request.user
+        )
+        
+        position_top = request.POST.get('position_top')
+        position_left = request.POST.get('position_left')
+        
+        decoration.position_top = int(position_top)
+        decoration.position_left = int(position_left)
+        decoration.save()
+        
+        return JsonResponse({'status': 'success'})
+    except UserRoomDecoration.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': '가구를 찾을 수 없습니다.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+def toggle_decoration_display(request, decoration_id):
+    """
+    마이룸 가구 표시/숨김 토글
+    
+    가구의 표시 여부를 전환합니다.
+    
+    Args:
+        request (HttpRequest): 사용자 요청 객체
+        decoration_id (int): 배치 ID
+        
+    Returns:
+        HttpResponse: my_room 페이지로 리다이렉트
+        
+    Side Effects:
+        - UserRoomDecoration.is_displayed 토글
+    """
+    from .models import UserRoomDecoration
+    
+    try:
+        decoration = UserRoomDecoration.objects.get(
+            decoration_id=decoration_id,
+            user_id=request.user
+        )
+        
+        decoration.is_displayed = not decoration.is_displayed
+        decoration.save()
+        
+        status = '표시' if decoration.is_displayed else '숨김'
+        messages.success(request, f'{decoration.room_item_id.item_name}을(를) {status}했습니다.')
+    except UserRoomDecoration.DoesNotExist:
+        messages.error(request, '가구를 찾을 수 없습니다.')
+    except Exception as e:
+        messages.error(request, f'오류가 발생했습니다: {str(e)}')
+    
+    return redirect('my_room')

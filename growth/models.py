@@ -107,6 +107,87 @@ class UserInventory(models.Model):
         return f"{self.user_id.username} - {self.item_id.item_name}"
 
 
+class RoomItem(models.Model):
+    """
+    마이룸 가구/배경 상점 카탈로그 모델
+    
+    마이룸을 꾸미기 위한 가구, 배경, 소품 등을 관리합니다.
+    각 아이템은 레이어링을 위한 z-index를 가집니다.
+    
+    Attributes:
+        room_item_id (AutoField): 아이템 ID (PK)
+        item_name (CharField): 아이템 이름
+        category (CharField): 카테고리 (배경, 가구, 소품)
+        cost (IntegerField): 필요한 포인트
+        image (ImageField): 아이템 이미지 파일
+        z_index (IntegerField): 레이어 순서 (높을수록 앞에 표시)
+        default_top (IntegerField): 기본 위치 (top)
+        default_left (IntegerField): 기본 위치 (left)
+        width (IntegerField): 이미지 가로 크기 (px)
+        height (IntegerField): 이미지 세로 크기 (px)
+        created_at (DateTimeField): 생성 시간
+    """
+    CATEGORY_CHOICES = [
+        ('background', '배경'),
+        ('furniture', '가구'),
+        ('accessory', '소품'),
+    ]
+    
+    room_item_id = models.AutoField(primary_key=True)
+    item_name = models.CharField(max_length=100, help_text="아이템 이름")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, help_text="아이템 카테고리")
+    cost = models.IntegerField(help_text="필요한 포인트")
+    image = models.ImageField(upload_to='room_items/', help_text="아이템 이미지")
+    z_index = models.IntegerField(default=1, help_text="레이어 순서 (높을수록 앞에 표시)")
+    default_top = models.IntegerField(default=0, help_text="기본 위치 (top, px)")
+    default_left = models.IntegerField(default=0, help_text="기본 위치 (left, px)")
+    width = models.IntegerField(default=100, help_text="이미지 가로 크기 (px)")
+    height = models.IntegerField(default=100, help_text="이미지 세로 크기 (px)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'room_item'
+        ordering = ['z_index', 'created_at']
+    
+    def __str__(self):
+        return f"{self.item_name} ({self.get_category_display()})"
+
+
+class UserRoomDecoration(models.Model):
+    """
+    사용자 마이룸 가구 배치 모델
+    
+    사용자가 구매한 가구를 마이룸에 배치한 정보를 저장합니다.
+    각 가구의 위치(top, left)와 활성화 여부를 추적합니다.
+    
+    Attributes:
+        decoration_id (AutoField): 배치 ID (PK)
+        user_id (ForeignKey): 사용자
+        room_item_id (ForeignKey): 가구 아이템
+        position_top (IntegerField): 배치된 위치 (top, px)
+        position_left (IntegerField): 배치된 위치 (left, px)
+        is_displayed (BooleanField): 마이룸에 표시 여부
+        created_at (DateTimeField): 배치 시간
+        updated_at (DateTimeField): 마지막 수정 시간
+    """
+    decoration_id = models.AutoField(primary_key=True)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='room_decorations', db_column='user_id')
+    room_item_id = models.ForeignKey(RoomItem, on_delete=models.CASCADE, related_name='user_placements', db_column='room_item_id')
+    position_top = models.IntegerField(default=0, help_text="배치된 위치 (top, px)")
+    position_left = models.IntegerField(default=0, help_text="배치된 위치 (left, px)")
+    is_displayed = models.BooleanField(default=True, help_text="마이룸에 표시 여부")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'user_room_decoration'
+        ordering = ['room_item_id__z_index', 'created_at']
+        unique_together = ['user_id', 'room_item_id']  # 사용자당 같은 아이템 1개만 배치
+    
+    def __str__(self):
+        return f"{self.user_id.username} - {self.room_item_id.item_name}"
+
+
 class PointsHistory(models.Model):
     """
     포인트 변동 이력 모델
