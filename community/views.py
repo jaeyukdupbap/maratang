@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : community/views.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-11-26 ~ 2025-11-30
+@Description : 커뮤니티 모임 관리 뷰 (모임 목록, 생성, 참여, 인증 제출)
+"""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -5,17 +13,22 @@ from django.db.models import Q, Count
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from .models import CommunityMeeting, MeetingParticipant, MeetingSubmission, SubmissionMedia
-from account.models import User
 from django.db import transaction
 
-# Create your views here.
 
 def community_list(request):
-    """커뮤니티 모임 목록"""
+    """
+    커뮤니티 모임 목록 조회 (검색 기능 포함)
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        
+    Returns:
+        HttpResponse: community.html 렌더링
+    """
     meetings = []
     user_participations = {}
-    search_query = request.GET.get('search', '')
-    
+    search_query = request.GET.get('q', '')
     try:
         meetings = CommunityMeeting.objects.all().annotate(
             participant_count=Count('participants')
@@ -25,8 +38,7 @@ def community_list(request):
         if search_query:
             meetings = meetings.filter(
                 Q(title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(location_name__icontains=search_query)
+                Q(description__icontains=search_query)
             )
         
         # 참여 여부 확인
@@ -48,7 +60,16 @@ def community_list(request):
 
 @login_required
 def meeting_detail(request, meeting_id):
-    """모임 상세 페이지"""
+    """
+    모임 상세 페이지 조회
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        meeting_id (int): 모임 ID
+        
+    Returns:
+        HttpResponse: meeting_detail.html 렌더링
+    """
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
     # 참여자 목록
@@ -85,7 +106,15 @@ def meeting_detail(request, meeting_id):
 
 @login_required
 def meeting_create(request):
-    """모임 생성"""
+    """
+    모임 생성 (POST) 및 생성 폼 표시 (GET)
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        
+    Returns:
+        HttpResponse: meeting_create.html 렌더링 또는 meeting_detail로 리다이렉트
+    """
     if request.method == 'POST':
         title = request.POST.get('title')
         description = request.POST.get('description')
@@ -134,7 +163,16 @@ def meeting_create(request):
 
 @login_required
 def meeting_join(request, meeting_id):
-    """모임 참여"""
+    """
+    모임 참여 처리
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        meeting_id (int): 모임 ID
+        
+    Returns:
+        HttpResponse: meeting_detail로 리다이렉트
+    """
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
     # 이미 참여했는지 확인
@@ -179,7 +217,16 @@ def meeting_join(request, meeting_id):
 
 @login_required
 def meeting_cancel(request, meeting_id):
-    """모임 참여 취소"""
+    """
+    모임 참여 취소 처리
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        meeting_id (int): 모임 ID
+        
+    Returns:
+        HttpResponse: meeting_detail로 리다이렉트
+    """
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
     participant = MeetingParticipant.objects.filter(
@@ -198,7 +245,17 @@ def meeting_cancel(request, meeting_id):
 
 @login_required
 def submission_create(request, meeting_id):
-    """인증 제출 (모임 종료 후 호스트만)"""
+    """
+    모임 인증 제출 (POST) 및 제출 폼 표시 (GET)
+    호스트만 모임 종료 후 인증 제출 가능
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        meeting_id (int): 모임 ID
+        
+    Returns:
+        HttpResponse: submission_create.html 렌더링 또는 meeting_detail로 리다이렉트
+    """
     meeting = get_object_or_404(CommunityMeeting, meeting_id=meeting_id)
     
     # 1. 권한 체크

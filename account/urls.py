@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : account/urls.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-11-25
+@Description : 사용자 계정 URL 라우팅
+"""
+
 from django.urls import path
 from . import views
 

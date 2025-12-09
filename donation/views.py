@@ -1,6 +1,16 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : donation/views.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-12-01 ~ 2025-12-03
+@Description : 기부 캠페인 관리 및 조회 기능 구현. 기부 이벤트 생성, 리스트 조회, 기부 기록 관리 등을 처리합니다.
+"""
+
 from django import forms
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Sum
+from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import get_user_model
 
@@ -46,7 +56,23 @@ class DonationPoolForm(forms.ModelForm):
 
 def donation(request):
     """
-    메인 기부 페이지
+    메인 기부 페이지 조회
+    
+    현재 진행 중인 활성 캠페인과 완료된 캠페인 목록, TOP 10 기부자,
+    최근 기부 내역을 포함하여 사용자에게 표시합니다.
+    
+    Args:
+        request (HttpRequest): 사용자 요청 객체
+        
+    Returns:
+        HttpResponse: donation.html 템플릿에 렌더링된 응답
+        
+    Context:
+        active_pool: 현재 진행 중인 DonationPool 객체
+        completed_pools: 완료된 DonationPool 목록
+        user_contribution: 로그인 사용자의 현재 캠페인 기여 포인트
+        top_donors: TOP 10 기부자 리스트
+        recent_donations: 최근 기부 내역 (5개 또는 전체)
     """
     active_pool = None
     completed_pools = []
@@ -120,7 +146,26 @@ def donation(request):
 
 @login_required
 def donation_history(request, pool_id):
-    """기부 명예의 전당 (완료된 캠페인 기준)"""
+    """
+    기부 캠페인 완료 후 명예의 전당 조회
+    
+    특정 DonationPool이 완료될 때 생성된 DonationHistory 기록을 조회합니다.
+    포인트 기여도에 따라 정렬된 기부자 명단을 표시합니다.
+    
+    Args:
+        request (HttpRequest): 사용자 요청 객체
+        pool_id (int): 조회할 DonationPool ID
+        
+    Returns:
+        HttpResponse: donation/history.html 템플릿에 렌더링된 응답
+        
+    Raises:
+        Http404: 해당 pool_id가 존재하지 않을 경우
+        
+    Context:
+        pool: 기부 캠페인 정보
+        history: 기부 기록 (기여 포인트 내림차순 정렬)
+    """
     pool = get_object_or_404(DonationPool, pool_id=pool_id)
     
     # 완료된 캠페인은 tasks.py의 create_donation_history 함수에 의해 
@@ -136,13 +181,110 @@ def donation_history(request, pool_id):
     return render(request, 'donation/history.html', context)
 
 
+def donation_history_api(request):
+    """
+    AJAX 모달용 페이지네이션 API
+    
+    TOP 10 기부자 또는 최근 기부 내역을 페이지네이션하여 JSON으로 응답합니다.
+    기부 메인 페이지의 모달에서 더보기 버튼 클릭 시 호출됩니다.
+    
+    Args:
+        request (HttpRequest): Query parameters 포함
+            - type (str): 'top' (상위 기부자) 또는 'recent' (최근 기부)
+            - page (int): 페이지 번호 (기본값: 1)
+    
+    Returns:
+        JsonResponse: 다음 구조의 JSON 응답
+            - results (list): 기부 데이터 리스트 (rank, username, amount 등)
+            - page (int): 현재 페이지 번호
+            - num_pages (int): 전체 페이지 수
+            - type (str): 요청한 리스트 타입
+    """
+    list_type = request.GET.get('type', 'recent')
+    page = int(request.GET.get('page', 1))
+
+    active_pool = (
+        DonationPool.objects.filter(status='open')
+        .order_by('-created_at')
+        .first()
+    )
+    if not active_pool:
+        return JsonResponse({'results': [], 'page': 1, 'num_pages': 1})
+
+    if list_type == 'top':
+        qs = (
+            PointsHistory.objects
+            .filter(created_at__gte=active_pool.created_at, points_change__gt=0)
+            .values('user_id', 'user_id__username')
+            .annotate(total_amount=Sum('points_change'))
+            .order_by('-total_amount')
+        )
+        paginator = Paginator(qs, 10)
+        page_obj = paginator.get_page(page)
+        results = [
+            {
+                'rank': idx + 1 + (page_obj.number - 1) * paginator.per_page,
+                'username': row['user_id__username'],
+                'amount': row['total_amount'],
+            }
+            for idx, row in enumerate(page_obj.object_list)
+        ]
+    else:
+        qs = (
+            PointsHistory.objects
+            .filter(created_at__gte=active_pool.created_at, points_change__gt=0)
+            .select_related('user_id')
+            .order_by('-created_at')
+        )
+        paginator = Paginator(qs, 10)
+        page_obj = paginator.get_page(page)
+        results = [
+            {
+                'username': row.user_id.username,
+                'amount': row.points_change,
+                'created': row.created_at.strftime('%Y-%m-%d %H:%M'),
+            }
+            for row in page_obj.object_list
+        ]
+
+    return JsonResponse({
+        'results': results,
+        'page': page_obj.number,
+        'num_pages': paginator.num_pages,
+        'type': list_type,
+    })
+
+
 def _is_admin(user):
+    """
+    사용자 관리자 여부 검증
+    
+    Args:
+        user (User): Django User 객체
+        
+    Returns:
+        bool: 인증된 사용자이면서 스태프 권한이 있으면 True
+    """
     return user.is_authenticated and user.is_staff
 
 
 @user_passes_test(_is_admin)
 def donation_create(request):
-    """관리자 전용 기부 캠페인 생성 페이지"""
+    """
+    관리자 전용 기부 캠페인 생성 페이지
+    
+    새로운 DonationPool 캠페인을 생성합니다. POST 요청 시 폼을 검증하고 저장합니다.
+    
+    Args:
+        request (HttpRequest): GET/POST 요청 객체
+    
+    Returns:
+        GET: donation/create.html 템플릿에 빈 폼 렌더링
+        POST: 성공 시 donation 페이지로 리다이렉트
+        
+    Context:
+        form: DonationPoolForm 인스턴스
+    """
     if request.method == 'POST':
         form = DonationPoolForm(request.POST)
         if form.is_valid():

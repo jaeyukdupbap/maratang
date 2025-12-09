@@ -1,11 +1,35 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : donation/models.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-12-01 ~ 2025-12-03
+@Description : 기부 풀 및 기부 이력 관리 모델
+"""
+
 from django.db import models
 from account.models import User
 
-# Create your models here.
-
 
 class DonationPool(models.Model):
-    """기부 풀(캠페인) 모델"""
+    """
+    기부 풀(캠페인) 모델
+    
+    사용자가 얻은 포인트를 특정 목표를 위해 기부하는 캠페인입니다.
+    목표 포인트에 도달하면 완료 상태로 변경되고, 기부자 명단이 저장됩니다.
+    
+    Attributes:
+        pool_id (AutoField): 기부 풀 ID (PK)
+        title (CharField): 캠페인 제목
+        sponsor (CharField, optional): 후원사 이름
+        description (TextField, optional): 캠페인 상세 설명
+        start_date (DateField, optional): 기부 시작일
+        end_date (DateField, optional): 기부 종료일
+        current_points (IntegerField): 현재까지 모인 포인트
+        goal_points (IntegerField): 캠페인 목표 포인트
+        status (CharField): 진행 상태 ('open' 또는 'completed')
+        created_at (DateTimeField): 캠페인 생성 시간
+        completed_at (DateTimeField, optional): 캠페인 완료 시간
+    """
     STATUS_CHOICES = [
         ('open', '진행 중'),
         ('completed', '완료'),
@@ -36,14 +60,31 @@ class DonationPool(models.Model):
         return self.title
     
     def get_progress_percentage(self):
-        """진행률 계산 (0-100)"""
+        """
+        캠페인 진행률 계산
+        
+        Returns:
+            int: 진행률 (0~100)
+        """
         if self.goal_points == 0:
             return 0
         return min(100, int((self.current_points / self.goal_points) * 100))
 
 
 class DonationHistory(models.Model):
-    """기부 명예의 전당 모델 (Pool 완료 시 사용자별 기여 스냅샷)"""
+    """
+    기부 명예의 전당 모델
+    
+    DonationPool이 완료될 때, 각 참여 사용자의 기여 포인트를 스냅샷으로 저장합니다.
+    사용자가 기부 완료 기념 배지나 랭킹을 볼 수 있게 합니다.
+    
+    Attributes:
+        donation_id (AutoField): 기부 기록 ID (PK)
+        pool_id (ForeignKey): 완료된 기부 풀
+        user_id (ForeignKey): 기여한 사용자
+        contributed_points (IntegerField): 해당 풀에 대한 최종 기여 포인트
+        created_at (DateTimeField): 기록 생성 시간
+    """
     donation_id = models.AutoField(primary_key=True)
     pool_id = models.ForeignKey(
         DonationPool,
@@ -71,9 +112,18 @@ class DonationHistory(models.Model):
 
 class DonationTransaction(models.Model):
     """
-    개별 기부 트랜잭션 로그
-    - 비즈니스 규칙: 펫 상점에서 포인트를 소비할 때마다,
-      동일 금액이 현재 진행 중인 DonationPool 에 기부된 것으로 기록
+    기부 거래 기록 모델
+    
+    사용자가 포인트를 어느 기부 풀에 기부했는지 추적합니다.
+    펫 상점에서 포인트를 소비할 때마다, 동일 금액이 현재 진행 중인 DonationPool에 
+    기부된 것으로 기록되는 비즈니스 규칙을 구현합니다.
+    
+    Attributes:
+        transaction_id (AutoField): 거래 기록 ID (PK)
+        pool_id (ForeignKey): 기부한 기부 풀
+        user_id (ForeignKey): 기부 사용자
+        amount (PositiveIntegerField): 기부한 포인트 양
+        created_at (DateTimeField): 거래 발생 시간
     """
     transaction_id = models.AutoField(primary_key=True)
     pool_id = models.ForeignKey(

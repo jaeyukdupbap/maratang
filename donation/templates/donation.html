@@ -6,12 +6,19 @@
 {% block content %}
 <div class="donation-page">
     <section class="donation-hero">
-        <div class="hero-text">
-            <p class="eyebrow">따뜻한 손길 모으기 ✨</p>
-            <h1>기부 돼지저금통</h1>
-            <p class="subtitle">
-                작은 포인트가 모여 큰 변화를 만들어요. 지금 참여하고 기부 내역을 확인해보세요.
-            </p>
+        <div class="hero-heading">
+            <div class="hero-text">
+                <p class="eyebrow">따뜻한 손길 모으기 ✨</p>
+                <h1>기부 돼지저금통</h1>
+                <p class="subtitle">
+                    작은 포인트가 모여 큰 변화를 만들어요. 지금 참여하고 기부 내역을 확인해보세요.
+                </p>
+            </div>
+            {% if user.is_staff %}
+                <a class="admin-ghost-btn" href="{% url 'donation_create' %}">
+                    ➕ 캠페인 생성
+                </a>
+            {% endif %}
         </div>
         <div class="hero-highlight">
             <div class="highlight-card">
@@ -30,7 +37,7 @@
                     {% if user.is_authenticated %}
                         {{ user_contribution|default:0 }}P
                     {% else %}
-                        - 
+                        -
                     {% endif %}
                 </h2>
                 <p class="muted">지금 참여하고 기록하세요</p>
@@ -39,122 +46,139 @@
     </section>
 
     <div class="container card-surface">
-
-    <div class="layout donation-layout">
-        {# 좌측 패널: 관리자 전용 버튼 #}
-        <aside style="flex: 1;">
-            {% if user.is_staff %}
-                <div class="admin-panel">
-                    <h2>관리자</h2>
-                    <a href="{% url 'donation_create' %}">기부 캠페인 생성</a>
-                </div>
-            {% endif %}
-        </aside>
-
-        {# 중앙 패널: 돼지저금통 + 진행률 #}
-        <main style="flex: 2;" id="donationPool">
-            {% if active_pool %}
-                <div class="donation-pool">
-                    <h2>{{ active_pool.title }}</h2>
-                    {% if active_pool.sponsor %}
-                        <p>후원사: {{ active_pool.sponsor }}</p>
-                    {% endif %}
-
-                    <div class="pig-image">
-                        <img src="{% static 'donation/pig.png' %}" alt="기부 돼지저금통">
-                    </div>
-
-                    <div class="progress-section">
-                        <div class="progress ghost-track">
-                            <div class="progress-bar static-five"></div>
+        <div class="donation-grid">
+            <main class="visual-panel" id="donationPool">
+                {% if active_pool %}
+                    <div class="donation-pool">
+                        <div class="pool-header">
+                            <div>
+                                <p class="eyebrow">현재 진행중</p>
+                                <h2>{{ active_pool.title }}</h2>
+                                {% if active_pool.sponsor %}
+                                    <p class="muted">후원사: {{ active_pool.sponsor }}</p>
+                                {% endif %}
+                            </div>
+                            {% if user.is_authenticated %}
+                                <div class="my-contribution">
+                                    <p class="label">내 기여도</p>
+                                    <strong>{{ user_contribution|default:0 }}P</strong>
+                                </div>
+                            {% endif %}
                         </div>
-                        <p class="progress-caption">
-                            진행률 {{ active_pool.get_progress_percentage|default:"0" }}% &nbsp;|&nbsp;
-                            {{ active_pool.current_points|default:0 }} / {{ active_pool.goal_points }} 포인트
-                        </p>
+
+                        <div class="pig-image">
+                            <img src="{% static 'donation/pig.png' %}" alt="기부 돼지저금통">
+                        </div>
+
+                        <div class="progress-section">
+                            <div class="progress ghost-track">
+                                <div class="progress-bar gradient-progress"
+                                     data-progress="{{ active_pool.get_progress_percentage|default:0 }}">
+                                </div>
+                            </div>
+                            <p class="progress-caption">
+                                진행률 {{ active_pool.get_progress_percentage|default:"0" }}% &nbsp;|&nbsp;
+                                {{ active_pool.current_points|default:0 }} / {{ active_pool.goal_points }} 포인트
+                            </p>
+                        </div>
                     </div>
-
-                    {% if user.is_authenticated %}
-                        <p>내 기여도: <strong>{{ user_contribution }}</strong>P</p>
-                    {% endif %}
-                </div>
-            {% else %}
-                <p>현재 진행 중인 기부 캠페인이 없습니다.</p>
-            {% endif %}
-        </main>
-
-        {# 우측 패널: TOP 10 / 최근 기부 내역 #}
-        <aside style="flex: 2;">
-            <section class="top-donors">
-                <h2>TOP 10 기부자</h2>
-                {% if top_donors %}
-                    <ol>
-                        {% for donor in top_donors %}
-                            <li>
-                                {{ donor.user_id__username }} - {{ donor.total_amount }}P
-                            </li>
-                        {% endfor %}
-                    </ol>
                 {% else %}
-                    <p>아직 집계된 기부 내역이 없습니다.</p>
+                    <div class="empty-state">
+                        <p>현재 진행 중인 기부 캠페인이 없습니다.</p>
+                        {% if user.is_staff %}
+                            <a class="admin-ghost-btn" href="{% url 'donation_create' %}">
+                                ➕ 캠페인 생성
+                            </a>
+                        {% endif %}
+                    </div>
                 {% endif %}
-            </section>
 
-            <section class="recent-donations" style="margin-top: 2rem;">
-                <h2>최근 기부 내역</h2>
-                {% if recent_donations %}
-                    <ul>
-                        {% for d in recent_donations %}
-                            <li class="donation-item"
-                                data-title="{{ d.pool_id.title }}"
-                                data-username="{{ d.user_id.username }}"
-                                data-amount="{{ d.amount }}"
-                                data-created="{{ d.created_at|date:'Y-m-d H:i' }}">
-                                <span>{{ d.user_id.username }}</span>
-                                <span>+{{ d.amount }}P</span>
-                                <span>({{ d.created_at|date:'m/d H:i' }})</span>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    {% if not show_all_donations %}
-                        <a href="?view=all">더보기</a>
+                <section class="campaign-summary">
+                    <h2>현재 진행 중인 기부 캠페인</h2>
+                    {% if active_pool %}
+                        <div class="summary-card">
+                            <div>
+                                <h3>{{ active_pool.title }}</h3>
+                                {% if active_pool.description %}
+                                    <p class="muted">{{ active_pool.description }}</p>
+                                {% endif %}
+                            </div>
+                            <p class="muted small">
+                                기간:
+                                {% if active_pool.start_date %}
+                                    {{ active_pool.start_date|date:"Y-m-d" }}
+                                {% else %}
+                                    시작일 미정
+                                {% endif %}
+                                ~
+                                {% if active_pool.end_date %}
+                                    {{ active_pool.end_date|date:"Y-m-d" }}
+                                {% else %}
+                                    종료일 미정
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% else %}
+                        <p>진행 중인 캠페인이 없습니다.</p>
                     {% endif %}
-                {% else %}
-                    <p>아직 기부 내역이 없습니다.</p>
-                {% endif %}
-            </section>
-        </aside>
+                </section>
+            </main>
+
+            <aside class="info-panel">
+                <section class="top-donors glass-card">
+                    <div class="section-head">
+                        <h2>TOP 10 기부자</h2>
+                    </div>
+                    {% if top_donors %}
+                        <ol class="donor-list">
+                            {% for donor in top_donors %}
+                                <li>
+                                    <div class="rank-badge rank-{{ forloop.counter }}">
+                                        {{ forloop.counter }}
+                                    </div>
+                                    <div class="donor-meta">
+                                        <span class="donor-name">{{ donor.user_id__username }}</span>
+                                        <span class="donor-amount">{{ donor.total_amount }}P</span>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                        <button class="link-more open-modal" data-modal-type="top">더보기</button>
+                    {% else %}
+                        <p class="muted">아직 집계된 기부 내역이 없습니다.</p>
+                    {% endif %}
+                </section>
+
+                <section class="recent-donations glass-card">
+                    <div class="section-head">
+                        <h2>최근 기부 내역</h2>
+                        {% if recent_donations %}
+                            <button class="link-more open-modal" data-modal-type="recent">더보기</button>
+                        {% endif %}
+                    </div>
+                    {% if recent_donations %}
+                        <ul class="recent-list">
+                            {% for d in recent_donations %}
+                                <li class="donation-item"
+                                    data-title="{{ d.pool_id.title }}"
+                                    data-username="{{ d.user_id.username }}"
+                                    data-amount="{{ d.points_change }}"
+                                    data-created="{{ d.created_at|date:'Y-m-d H:i' }}">
+                                    <div class="item-text">
+                                        <span class="donor-name">{{ d.user_id.username }}</span>
+                                        <span class="donor-amount">+{{ d.points_change }}P</span>
+                                    </div>
+                                    <span class="item-date">{{ d.created_at|date:'m/d H:i' }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="muted">아직 기부 내역이 없습니다.</p>
+                    {% endif %}
+                </section>
+            </aside>
+        </div>
     </div>
-
-    {# 하단 패널: 현재 캠페인 요약 정보 #}
-    <section class="campaign-summary" style="margin-top: 3rem;">
-        <h2>현재 진행 중인 기부 캠페인</h2>
-        {% if active_pool %}
-            <div>
-                <h3>{{ active_pool.title }}</h3>
-                {% if active_pool.description %}
-                    <p>{{ active_pool.description }}</p>
-                {% endif %}
-                <p>
-                    기간:
-                    {% if active_pool.start_date %}
-                        {{ active_pool.start_date|date:"Y-m-d" }}
-                    {% else %}
-                        시작일 미정
-                    {% endif %}
-                    ~
-                    {% if active_pool.end_date %}
-                        {{ active_pool.end_date|date:"Y-m-d" }}
-                    {% else %}
-                        종료일 미정
-                    {% endif %}
-                </p>
-            </div>
-        {% else %}
-            <p>진행 중인 캠페인이 없습니다.</p>
-        {% endif %}
-    </section>
-</div>
 
 <style>
 .donation-page {
@@ -166,16 +190,23 @@
 .donation-hero {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 48px 20px 12px;
+    padding: 48px 20px 20px;
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 24px;
+    grid-template-columns: 1fr;
+    gap: 16px;
     background:
         linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(118, 75, 162, 0.24)),
         rgba(18, 20, 42, 0.75);
     border-radius: 24px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.hero-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
 }
 
 .hero-text h1 {
@@ -200,48 +231,23 @@
     margin: 0;
 }
 
-.hero-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.btn-primary,
-.btn-secondary {
+.admin-ghost-btn {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 22px;
+    gap: 6px;
+    padding: 10px 14px;
     border-radius: 999px;
-    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f6ff;
     text-decoration: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    border: none;
-    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s ease;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-    box-shadow: 0 8px 20px rgba(118, 75, 162, 0.25);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(118, 75, 162, 0.3);
-}
-
-.btn-secondary {
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f2027;
-    border: 2px solid rgba(31, 32, 39, 0.08);
-}
-
-.btn-secondary:hover {
-    transform: translateY(-2px);
-    border-color: rgba(31, 32, 39, 0.18);
-    background: #fff;
+.admin-ghost-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: translateY(-1px);
 }
 
 .hero-highlight {
@@ -303,28 +309,170 @@
     color: #d9def7;
 }
 
+.donation-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.visual-panel,
+.info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.donation-pool {
+    background: rgba(28, 30, 56, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.pool-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.my-contribution {
+    text-align: right;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pig-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 0 4px;
+}
+
+.pig-image img {
+    max-width: 320px;
+    width: 100%;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 50px rgba(138, 123, 255, 0.3);
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(255,255,255,0));
+}
+
+.progress-section {
+    margin-top: 14px;
+}
+
 .donation-pool .progress {
-    border-radius: 10px;
-    background: transparent;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
+    height: 26px;
+    overflow: hidden;
 }
 
 .donation-pool .progress-bar {
-    background: linear-gradient(135deg, #8a7bff 0%, #b04bff 100%);
-    color: #fff;
-    padding: 10px;
-    border-radius: 10px;
-    text-align: center;
+    height: 100%;
+    border-radius: 16px;
+}
+
+.gradient-progress {
+    background: linear-gradient(90deg, #8a7bff 0%, #b04bff 50%, #ff7bc8 100%);
+    background-size: 200% 100%;
+    animation: flow 4s linear infinite;
+}
+
+@keyframes flow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+.progress-caption {
+    margin-top: 8px;
+    color: #d9def7;
+    font-size: 14px;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(8px);
+}
+
+.section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.donor-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.donor-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.rank-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    color: #0f1022;
+}
+
+.rank-1 { background: linear-gradient(135deg, #ffd700, #ffec9f); }
+.rank-2 { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); }
+.rank-3 { background: linear-gradient(135deg, #cd7f32, #e8b27c); }
+
+.donor-meta {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
     font-weight: 700;
 }
 
-.top-donors ol {
-    padding-left: 18px;
+.donor-name { color: #f5f6ff; }
+.donor-amount { color: #b8c2ff; }
+
+.recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .donation-item {
     cursor: pointer;
     transition: background 0.2s ease, transform 0.2s ease;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .donation-item:hover {
@@ -332,46 +480,109 @@
     transform: translateY(-1px);
 }
 
-.donation-layout {
+.item-text {
     display: flex;
-    gap: 2rem;
-    align-items: flex-start;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.donation-layout > aside {
-    flex: 1;
+.item-date {
+    font-size: 12px;
+    color: #c9cde5;
 }
 
-.donation-layout > main {
-    flex: 2;
+.campaign-summary .summary-card {
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.donation-layout > aside:last-of-type {
-    flex: 2;
+.summary-card .small {
+    font-size: 13px;
 }
 
-.pig-image img {
-    max-width: 280px;
-    width: 100%;
+.link-more {
+    color: #cdd2ff;
+    text-decoration: none;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
 
-.progress-section {
-    margin-top: 12px;
+.link-more:hover {
+    text-decoration: underline;
 }
 
-.ghost-track {
+.glass-modal {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+}
+
+.glass-modal__dialog {
     position: relative;
+    width: min(480px, 90vw);
+    background: rgba(28, 30, 56, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    padding: 20px 20px 16px;
 }
 
-.ghost-track .static-five {
-    width: 5%;
-    min-width: 5%;
+.glass-modal__dialog.wide {
+    width: min(720px, 92vw);
 }
 
-.progress-caption {
-    margin-top: 6px;
-    color: #d9def7;
-    font-size: 14px;
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f6ff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.pagination {
+    margin-top: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pagination button {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f6ff;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    min-width: 40px;
+}
+
+.pagination button.active {
+    background: linear-gradient(135deg, #8a7bff, #ff7bc8);
+    border-color: transparent;
+}
+
+.pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 @media (max-width: 960px) {
@@ -379,15 +590,16 @@
         grid-template-columns: 1fr;
         background-size: 140px;
     }
-
-    .hero-text h1 {
-        font-size: 30px;
-    }
 }
 
-@media (max-width: 640px) {
-    .hero-actions {
+@media (max-width: 768px) {
+    .donation-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-heading {
         flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>
@@ -396,16 +608,25 @@
 </div>
 
 {# 상세 모달 #}
-<div id="donationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);">
-    <div style="background:#fff; max-width:400px; margin:5rem auto; padding:1.5rem; border-radius:8px; position:relative;">
-        <button type="button" id="donationModalClose" style="position:absolute; top:0.5rem; right:0.5rem;">X</button>
+<div id="donationModal" class="glass-modal" style="display:none;">
+    <div class="glass-modal__dialog">
+        <button type="button" id="donationModalClose" class="modal-close">✕</button>
         <h3 id="modalTitle"></h3>
         <p><strong>기부자:</strong> <span id="modalUsername"></span></p>
         <p><strong>기부 포인트:</strong> <span id="modalAmount"></span>P</p>
         <p><strong>기부 일시:</strong> <span id="modalCreated"></span></p>
-        <p style="font-size:0.9rem; color:#666;">
+        <p class="muted small">
             이 내역은 펫 상점에서 포인트를 사용한 결과 자동으로 적립된 기부 기록입니다.
         </p>
+    </div>
+</div>
+
+<div id="listModal" class="glass-modal" style="display:none;">
+    <div class="glass-modal__dialog wide">
+        <button type="button" id="listModalClose" class="modal-close">✕</button>
+        <h3 id="listModalTitle">기부 내역</h3>
+        <div id="listModalBody"></div>
+        <div class="pagination" id="listPagination"></div>
     </div>
 </div>
 
@@ -415,6 +636,13 @@
         const closeBtn = document.getElementById('donationModalClose');
 
         if (!modal || !closeBtn) return;
+
+        // 프로그레스 바 너비 설정 (템플릿 변수를 안전하게 반영)
+        document.querySelectorAll('.progress-bar[data-progress]').forEach(function (bar) {
+            const value = parseFloat(bar.dataset.progress || '0');
+            const clamped = Math.max(0, Math.min(value, 100));
+            bar.style.width = `${clamped}%`;
+        });
 
         const titleEl = document.getElementById('modalTitle');
         const usernameEl = document.getElementById('modalUsername');
@@ -439,6 +667,93 @@
             if (e.target === modal) {
                 modal.style.display = 'none';
             }
+        });
+    })();
+
+    (function () {
+        const listModal = document.getElementById('listModal');
+        const listClose = document.getElementById('listModalClose');
+        const listBody = document.getElementById('listModalBody');
+        const listPagination = document.getElementById('listPagination');
+        const listTitle = document.getElementById('listModalTitle');
+        const openButtons = document.querySelectorAll('.open-modal');
+
+        if (!listModal) return;
+
+        function renderList(type, data) {
+            if (type === 'top') {
+                listTitle.textContent = '전체 TOP 기부자';
+                listBody.innerHTML = data.results.map((item) => `
+                    <div class="donation-item">
+                        <div class="item-text">
+                            <span class="donor-name">#${item.rank} ${item.username}</span>
+                            <span class="donor-amount">${item.amount}P</span>
+                        </div>
+                    </div>
+                `).join('') || '<p class="muted">데이터가 없습니다.</p>';
+            } else {
+                listTitle.textContent = '전체 기부 내역';
+                listBody.innerHTML = data.results.map((item) => `
+                    <div class="donation-item">
+                        <div class="item-text">
+                            <span class="donor-name">${item.username}</span>
+                            <span class="donor-amount">+${item.amount}P</span>
+                        </div>
+                        <span class="item-date">${item.created}</span>
+                    </div>
+                `).join('') || '<p class="muted">데이터가 없습니다.</p>';
+            }
+        }
+
+        function renderPagination(type, page, numPages) {
+            const buttons = [];
+            buttons.push(`<button data-page="${page - 1}" data-type="${type}" ${page <= 1 ? 'disabled' : ''}>이전</button>`);
+            for (let i = 1; i <= numPages; i++) {
+                buttons.push(`<button data-page="${i}" data-type="${type}" class="${i === page ? 'active' : ''}">${i}</button>`);
+            }
+            buttons.push(`<button data-page="${page + 1}" data-type="${type}" ${page >= numPages ? 'disabled' : ''}>다음</button>`);
+            listPagination.innerHTML = buttons.join('');
+        }
+
+        async function fetchList(type, page = 1) {
+            const url = new URL('{% url "donation_history_api" %}', window.location.origin);
+            url.searchParams.set('type', type);
+            url.searchParams.set('page', page);
+            const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            renderList(type, data);
+            renderPagination(type, data.page, data.num_pages);
+        }
+
+        listPagination.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-page]');
+            if (!btn) return;
+            const page = parseInt(btn.dataset.page, 10);
+            const type = btn.dataset.type;
+            if (!type || Number.isNaN(page)) return;
+            fetchList(type, page);
+        });
+
+        openButtons.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const type = btn.dataset.modalType;
+                if (!type) return;
+                listModal.style.display = 'grid';
+                fetchList(type, 1);
+            });
+        });
+
+        const closeList = () => {
+            listModal.style.display = 'none';
+            listBody.innerHTML = '';
+            listPagination.innerHTML = '';
+        };
+
+        listClose?.addEventListener('click', closeList);
+        listModal.addEventListener('click', (e) => {
+            if (e.target === listModal) closeList();
         });
     })();
 </script>

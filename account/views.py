@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : account/views.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-11-25
+@Description : 사용자 계정 관리 뷰 (회원가입, 로그인, 로그아웃)
+"""
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -5,10 +13,17 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from .models import User
 
-# Create your views here.
 
 def signup(request):
-    """회원가입"""
+    """
+    사용자 회원가입 처리
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        
+    Returns:
+        HttpResponse: signup.html 렌더링 또는 로그인 페이지로 리다이렉트
+    """
     if request.method == 'POST':
         email = request.POST.get('email')
         username = request.POST.get('username')
@@ -49,7 +64,15 @@ def signup(request):
 
 
 def login_view(request):
-    """로그인"""
+    """
+    사용자 로그인 처리
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        
+    Returns:
+        HttpResponse: login.html 렌더링 또는 main 페이지로 리다이렉트
+    """
     if request.user.is_authenticated:
         return redirect('main')
     
@@ -77,7 +100,15 @@ def login_view(request):
 
 @login_required
 def logout_view(request):
-    """로그아웃"""
+    """
+    사용자 로그아웃 처리
+    
+    Args:
+        request (HttpRequest): HTTP 요청 객체
+        
+    Returns:
+        HttpResponse: main 페이지로 리다이렉트
+    """
     logout(request)
     messages.success(request, '로그아웃되었습니다.')
     return redirect('main')

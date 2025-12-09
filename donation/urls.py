@@ -6,4 +6,5 @@ urlpatterns = [
     path('', views.donation, name='donation'),
     path('create/', views.donation_create, name='donation_create'),
     path('history/<int:pool_id>/', views.donation_history, name='donation_history'),
+    path('donation/api/history/', views.donation_history_api, name='donation_history_api'),
 ]

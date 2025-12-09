@@ -61,6 +61,17 @@
                     <div class="xp-bar">
                         <div class="xp-fill" data-xp="{% widthratio user_pet.current_xp user_pet.max_xp 100 %}"></div>
                     </div>
+                    
+                    <form class="pet-change-form" method="POST" action="{% url 'pet_change' %}">
+                        {% csrf_token %}
+                        <label for="pet_type">펫 변경</label>
+                        <select id="pet_type" name="pet_type" required>
+                            {% for code,label in pet_choices %}
+                                <option value="{{ code }}" {% if user_pet.pet_type == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-secondary btn-sm">변경하기</button>
+                    </form>
                 </div>
             </div>
             
@@ -385,6 +396,26 @@ document.addEventListener('DOMContentLoaded', function() {
         color: #fefefe;
         font-weight: bold;
         font-size: 0.9rem;
+    }
+
+    .pet-change-form {
+        margin-top: 16px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .pet-change-form select {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #f5f6ff;
+        padding: 8px 12px;
+        border-radius: 10px;
+    }
+
+    .pet-change-form option {
+        color: #0f172a;
     }
     
     .no-pet-section {

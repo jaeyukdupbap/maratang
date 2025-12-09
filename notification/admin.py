@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : notification/admin.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-12-06
+@Description : Django 관리자 페이지 - 사용자 알림 관리
+"""
+
 from django.contrib import admin
 from .models import Notification
 
@@ -5,6 +13,12 @@ from .models import Notification
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
+    """
+    사용자 알림 관리자 클래스
+    
+    AI 검증 결과, 포인트 지급, 기부 완료 등의 알림을 관리합니다.
+    읽음 상태를 일괄 변경할 수 있는 액션을 제공합니다.
+    """
     list_display = ['notification_id', 'user_id', 'notification_type', 'title', 'is_read', 'created_at']
     list_filter = ['notification_type', 'is_read', 'created_at']
     search_fields = ['user_id__username', 'user_id__email', 'title', 'message']

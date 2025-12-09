@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : community/admin.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-11-26 ~ 2025-11-30
+@Description : Django 관리자 페이지 - 커뮤니티 모임, 제출, 미디어 관리. AI 검증 점수 시각화 및 상태 추적.
+"""
+
 import os
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
@@ -13,7 +21,15 @@ from notification.models import Notification
 # 1. 헬퍼 함수 (안전한 포맷팅을 위해 분리)
 # =========================================================
 def get_score_html(score):
-    """점수를 받아서 색상이 적용된 HTML 문자열(SafeString)을 반환"""
+    """
+    점수를 받아서 색상이 적용된 HTML 문자열(SafeString)을 반환
+    
+    Args:
+        score (float): 0.0~1.0 범위의 유사도 점수
+        
+    Returns:
+        SafeString: HTML 포맷된 색상 표시 점수
+    """
     if score is None:
         return "-"
     

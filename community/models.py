@@ -1,7 +1,13 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : community/models.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-11-26 ~ 2025-11-30
+@Description : 커뮤니티 모임 및 인증 관련 모델 (모임, 참여자, 제출, 미디어)
+"""
+
 from django.db import models
 from account.models import User
-
-# Create your models here.
 
 class CommunityMeeting(models.Model):
     """커뮤니티 모임 모델"""

@@ -6,12 +6,6 @@
 <div class="container">
     <h1>인증 제출: {{ meeting.title }}</h1>
     
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    
     <form method="post" action="{% url 'submission_create' meeting.meeting_id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-group">

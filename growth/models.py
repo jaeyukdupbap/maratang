@@ -1,3 +1,11 @@
+"""
+@Project : Mood Garden (Community & Donation Platform)
+@File    : growth/models.py
+@Author  : Minsu Kim (Backend & Infra)
+@Date    : 2025-12-03
+@Description : 사용자 성장 시스템 모델 (펫, 아이템, 포인트 히스토리 등)
+"""
+
 from django.db import models
 from account.models import User
 
@@ -26,7 +34,24 @@ class PetItem(models.Model):
 
 
 class UserPet(models.Model):
-    """사용자 펫 상태 모델"""
+    """
+    사용자 펫 상태 모델
+    
+    각 사용자가 키우는 펫의 현재 상태를 추적합니다.
+    포인트 획득 시 경험치가 증가하며, 경험치가 일정 수준에 도달하면 레벨 업합니다.
+    
+    Attributes:
+        user_pet_id (AutoField): 펫 ID (PK)
+        user_id (OneToOneField): 펫 소유자
+        pet_type (CharField): 펫 종류 ('cat', 'dog', 'tree', 'otter')
+        current_level (IntegerField): 현재 레벨
+        current_xp (IntegerField): 현재 경험치
+        created_at (DateTimeField): 펫 생성 시간
+        updated_at (DateTimeField): 마지막 업데이트 시간
+        
+    Properties:
+        max_xp: 현재 레벨에서 다음 레벨까지 필요한 경험치
+    """
     PET_TYPE_CHOICES = [
         ('cat', '고양이'),
         ('dog', '강아지'),
@@ -54,7 +79,19 @@ class UserPet(models.Model):
 
 
 class UserInventory(models.Model):
-    """사용자 구매 아이템 인벤토리 모델"""
+    """
+    사용자 구매 아이템 인벤토리 모델
+    
+    사용자가 포인트로 구매한 펫 아이템을 관리합니다.
+    같은 아이템을 여러 개 구매할 수 없으며, 장착/해제 상태를 추적합니다.
+    
+    Attributes:
+        inventory_id (AutoField): 인벤토리 항목 ID (PK)
+        user_id (ForeignKey): 아이템 소유자
+        item_id (ForeignKey): 구매한 아이템
+        is_equipped (BooleanField): 펫에 장착 여부
+        acquired_at (DateTimeField): 구매 시간
+    """
     inventory_id = models.AutoField(primary_key=True)
     user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inventory_items', db_column='user_id')
     item_id = models.ForeignKey(PetItem, on_delete=models.CASCADE, related_name='owned_by_users', db_column='item_id')
@@ -71,7 +108,21 @@ class UserInventory(models.Model):
 
 
 class PointsHistory(models.Model):
-    """포인트 변동 이력 모델"""
+    """
+    포인트 변동 이력 모델
+    
+    모든 포인트 획득 및 소비 내역을 기록합니다.
+    기부 시스템, 통계 분석, 감사 추적 등에 사용됩니다.
+    
+    Attributes:
+        point_id (AutoField): 기록 ID (PK)
+        user_id (ForeignKey): 포인트 변동 사용자
+        meeting_id (ForeignKey): 관련 모임 (선택사항)
+        item_id (ForeignKey): 구매한 아이템 (선택사항)
+        points_change (IntegerField): 변동 포인트 (+100, -50 등)
+        reason (CharField): 변동 사유
+        created_at (DateTimeField): 기록 생성 시간
+    """
     REASON_CHOICES = [
         ('ai_approval', 'AI 승인'),
         ('admin_approval', '관리자 승인'),
